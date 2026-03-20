@@ -64,7 +64,7 @@ def split_text(text: str, max_len: int = 3000) -> List[str]:
 
         if len(line_with_nl) > max_len:
             for i in range(0, len(line), max_len):
-                chunks.append(line[i: i + max_len])
+                chunks.append(line[i : i + max_len])
         else:
             current.append(line_with_nl)
             current_len += len(line_with_nl)

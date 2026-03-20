@@ -781,9 +781,9 @@ class QQChannel(BaseChannel):
         # Remove [Image: ] tags from text
         clean_text = _IMAGE_TAG_PATTERN.sub("", text).strip()
 
-        # Send text content if not empty (split into chunks to respect QQ limits)
+        # Send text content if not empty, split into chunks
         text_sent = False
-        for chunk in (split_text(clean_text) if clean_text else []):
+        for chunk in split_text(clean_text) if clean_text else []:
             try:
                 await _dispatch(chunk, use_markdown)
                 text_sent = True

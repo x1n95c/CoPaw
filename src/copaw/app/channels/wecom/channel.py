@@ -640,7 +640,7 @@ class WecomChannel(BaseChannel):
         processing_sid = m.pop("wecom_processing_stream_id", "")
 
         first_chunk = True
-        for chunk in (split_text(body) if body else []):
+        for chunk in split_text(body) if body else []:
             sid = processing_sid if first_chunk else ""
             first_chunk = False
             if frame:
