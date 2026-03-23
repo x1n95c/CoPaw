@@ -119,12 +119,14 @@ def _make_fresh_state(workspace_id: str, workspace_dir: str) -> dict[str, Any]:
 
 
 def _get_workspace_state(
-    workspace_id: str, workspace_dir: str = ""
+    workspace_id: str,
+    workspace_dir: str = "",
 ) -> dict[str, Any]:
     """Get or create the browser state for a workspace."""
     if workspace_id not in _workspace_states:
         _workspace_states[workspace_id] = _make_fresh_state(
-            workspace_id, workspace_dir
+            workspace_id,
+            workspace_dir,
         )
     return _workspace_states[workspace_id]
 
@@ -169,7 +171,8 @@ def _reset_browser_state(state: dict) -> None:
 
 
 async def _idle_watchdog(
-    state: dict, idle_seconds: float = _BROWSER_IDLE_TIMEOUT
+    state: dict,
+    idle_seconds: float = _BROWSER_IDLE_TIMEOUT,
 ) -> None:
     """Background task: stop the browser after it has been idle for *idle_seconds*.
 
@@ -526,7 +529,7 @@ async def _ensure_browser(
                     state["context"] = context
                 else:
                     launch_kwargs: dict[str, Any] = {
-                        "headless": state["headless"]
+                        "headless": state["headless"],
                     }
                     extra_args = _chromium_launch_args()
                     if extra_args:
@@ -864,7 +867,9 @@ async def _action_open(state: dict, url: str, page_id: str) -> ToolResponse:
 
 
 async def _action_navigate(
-    state: dict, url: str, page_id: str
+    state: dict,
+    url: str,
+    page_id: str,
 ) -> ToolResponse:
     url = (url or "").strip()
     if not url:
@@ -1199,7 +1204,11 @@ async def _action_type(
     try:
         if ref:
             locator = _get_locator_by_ref(
-                state, page, page_id, ref, frame_selector
+                state,
+                page,
+                page_id,
+                ref,
+                frame_selector,
             )
             if locator is None:
                 return _tool_response(
@@ -1754,7 +1763,9 @@ async def _action_handle_dialog(
 
 
 async def _action_file_upload(
-    state: dict, page_id: str, paths_json: str
+    state: dict,
+    page_id: str,
+    paths_json: str,
 ) -> ToolResponse:
     page = _get_page(state, page_id)
     if not page:
@@ -1816,7 +1827,9 @@ async def _action_file_upload(
 
 
 async def _action_fill_form(
-    state: dict, page_id: str, fields_json: str
+    state: dict,
+    page_id: str,
+    fields_json: str,
 ) -> ToolResponse:
     page = _get_page(state, page_id)
     if not page:
@@ -1979,7 +1992,9 @@ async def _action_install() -> ToolResponse:
 
 
 async def _action_press_key(
-    state: dict, page_id: str, key: str
+    state: dict,
+    page_id: str,
+    key: str,
 ) -> ToolResponse:
     key = (key or "").strip()
     if not key:
@@ -2070,7 +2085,9 @@ async def _action_network_requests(
 
 
 async def _action_run_code(
-    state: dict, page_id: str, code: str
+    state: dict,
+    page_id: str,
+    code: str,
 ) -> ToolResponse:
     """Run JS in page (like eval). Use evaluate for element (ref)."""
     code = (code or "").strip()
@@ -2246,7 +2263,11 @@ async def _action_hover(
     try:
         if ref:
             locator = _get_locator_by_ref(
-                state, page, page_id, ref, frame_selector
+                state,
+                page,
+                page_id,
+                ref,
+                frame_selector,
             )
             if locator is None:
                 return _tool_response(
@@ -2322,7 +2343,11 @@ async def _action_select_option(
         )
     try:
         locator = _get_locator_by_ref(
-            state, page, page_id, ref, frame_selector
+            state,
+            page,
+            page_id,
+            ref,
+            frame_selector,
         )
         if locator is None:
             return _tool_response(
@@ -2797,7 +2822,10 @@ async def browser_use(  # pylint: disable=R0911,R0912
             )
         if action == "handle_dialog":
             return await _action_handle_dialog(
-                state, page_id, accept, prompt_text
+                state,
+                page_id,
+                accept,
+                prompt_text,
             )
         if action == "file_upload":
             return await _action_file_upload(state, page_id, paths_json)
@@ -2850,7 +2878,11 @@ async def browser_use(  # pylint: disable=R0911,R0912
             return await _action_tabs(state, page_id, tab_action, index)
         if action == "wait_for":
             return await _action_wait_for(
-                state, page_id, wait_time, text, text_gone
+                state,
+                page_id,
+                wait_time,
+                text,
+                text_gone,
             )
         if action == "pdf":
             return await _action_pdf(state, page_id, path)
@@ -2863,19 +2895,19 @@ async def browser_use(  # pylint: disable=R0911,R0912
                         {"ok": False, "error": "Browser not started"},
                         ensure_ascii=False,
                         indent=2,
-                    )
+                    ),
                 )
             urls_list = _parse_json_param(url, []) if url else []
             try:
                 cookies = await state["context"].cookies(
-                    urls=urls_list if urls_list else []
+                    urls=urls_list if urls_list else [],
                 )
                 return _tool_response(
                     json.dumps(
                         {"ok": True, "cookies": cookies},
                         ensure_ascii=False,
                         indent=2,
-                    )
+                    ),
                 )
             except Exception as e:
                 return _tool_response(
@@ -2883,7 +2915,7 @@ async def browser_use(  # pylint: disable=R0911,R0912
                         {"ok": False, "error": str(e)},
                         ensure_ascii=False,
                         indent=2,
-                    )
+                    ),
                 )
         if action == "cookies_set":
             if not state["context"]:
@@ -2892,7 +2924,7 @@ async def browser_use(  # pylint: disable=R0911,R0912
                         {"ok": False, "error": "Browser not started"},
                         ensure_ascii=False,
                         indent=2,
-                    )
+                    ),
                 )
             try:
                 cookies = json.loads(fields_json) if fields_json else []
@@ -2905,7 +2937,7 @@ async def browser_use(  # pylint: disable=R0911,R0912
                         },
                         ensure_ascii=False,
                         indent=2,
-                    )
+                    ),
                 )
             except Exception as e:
                 return _tool_response(
@@ -2913,7 +2945,7 @@ async def browser_use(  # pylint: disable=R0911,R0912
                         {"ok": False, "error": str(e)},
                         ensure_ascii=False,
                         indent=2,
-                    )
+                    ),
                 )
         if action == "cookies_clear":
             if not state["context"]:
@@ -2922,7 +2954,7 @@ async def browser_use(  # pylint: disable=R0911,R0912
                         {"ok": False, "error": "Browser not started"},
                         ensure_ascii=False,
                         indent=2,
-                    )
+                    ),
                 )
             try:
                 await state["context"].clear_cookies()
@@ -2931,7 +2963,7 @@ async def browser_use(  # pylint: disable=R0911,R0912
                         {"ok": True, "message": "All cookies cleared"},
                         ensure_ascii=False,
                         indent=2,
-                    )
+                    ),
                 )
             except Exception as e:
                 return _tool_response(
@@ -2939,7 +2971,7 @@ async def browser_use(  # pylint: disable=R0911,R0912
                         {"ok": False, "error": str(e)},
                         ensure_ascii=False,
                         indent=2,
-                    )
+                    ),
                 )
         return _tool_response(
             json.dumps(
