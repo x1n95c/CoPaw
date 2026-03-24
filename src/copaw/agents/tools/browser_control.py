@@ -336,6 +336,12 @@ def _sync_browser_close(state: dict):
             state["_sync_browser"].close()
         except Exception:
             pass
+    elif state["_sync_context"] is not None:
+        # persistent context mode: no separate browser object, close context directly
+        try:
+            state["_sync_context"].close()
+        except Exception:
+            pass
     if state["_sync_playwright"] is not None:
         try:
             state["_sync_playwright"].stop()
@@ -479,9 +485,8 @@ async def _ensure_browser(
     """Start browser if not running. Return True if ready, False on failure."""
     # Check browser state based on mode
     if _USE_SYNC_PLAYWRIGHT:
-        if (
-            state["_sync_browser"] is not None
-            and state["_sync_context"] is not None
+        if state["_sync_context"] is not None and (
+            state["_sync_browser"] is not None or state["user_data_dir"]
         ):
             _touch_activity(state)
             return True
@@ -609,7 +614,10 @@ async def _action_start(
 ) -> ToolResponse:
     # Check browser state based on mode
     if _USE_SYNC_PLAYWRIGHT:
-        browser_exists = state["_sync_browser"] is not None
+        browser_exists = (
+            state["_sync_browser"] is not None
+            or state["_sync_context"] is not None
+        )
         current_headless = not state.get("_sync_headless", True)
     else:
         browser_exists = (
@@ -2910,9 +2918,18 @@ async def browser_use(  # pylint: disable=R0911,R0912
                 urls_list = [url]
             urls_list = urls_list or []
             try:
-                cookies = await ctx.cookies(
-                    urls=urls_list if urls_list else [],
-                )
+                if _USE_SYNC_PLAYWRIGHT:
+                    loop = asyncio.get_event_loop()
+                    cookies = await loop.run_in_executor(
+                        _get_executor(),
+                        lambda: ctx.cookies(
+                            urls=urls_list if urls_list else [],
+                        ),
+                    )
+                else:
+                    cookies = await ctx.cookies(
+                        urls=urls_list if urls_list else [],
+                    )
                 return _tool_response(
                     json.dumps(
                         {"ok": True, "cookies": cookies},
@@ -2957,7 +2974,14 @@ async def browser_use(  # pylint: disable=R0911,R0912
                             indent=2,
                         ),
                     )
-                await ctx.add_cookies(cookies)
+                if _USE_SYNC_PLAYWRIGHT:
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(
+                        _get_executor(),
+                        lambda: ctx.add_cookies(cookies),
+                    )
+                else:
+                    await ctx.add_cookies(cookies)
                 return _tool_response(
                     json.dumps(
                         {
@@ -2987,7 +3011,14 @@ async def browser_use(  # pylint: disable=R0911,R0912
                     ),
                 )
             try:
-                await ctx.clear_cookies()
+                if _USE_SYNC_PLAYWRIGHT:
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(
+                        _get_executor(),
+                        ctx.clear_cookies,
+                    )
+                else:
+                    await ctx.clear_cookies()
                 return _tool_response(
                     json.dumps(
                         {"ok": True, "message": "All cookies cleared"},
