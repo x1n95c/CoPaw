@@ -297,6 +297,18 @@ def _sync_browser_launch(state: dict):
         exe = _chromium_executable_path()
 
     if exe:
+        user_data_dir = state["user_data_dir"]
+        if user_data_dir:
+            Path(user_data_dir).mkdir(parents=True, exist_ok=True)
+            extra_args = _chromium_launch_args()
+            context = pw.chromium.launch_persistent_context(
+                user_data_dir=user_data_dir,
+                headless=state["headless"],
+                executable_path=exe,
+                args=extra_args if extra_args else [],
+            )
+            _attach_context_listeners(state, context)
+            return pw, None, context
         launch_kwargs = {"headless": state["headless"]}
         extra_args = _chromium_launch_args()
         if extra_args:
@@ -349,6 +361,11 @@ def _parse_json_param(value: str, default: Any = None):
 def _get_page(state: dict, page_id: str):
     """Return page for page_id or None if not found."""
     return state["pages"].get(page_id)
+
+
+def _get_context(state: dict):
+    """Return the active browser context regardless of sync/async mode."""
+    return state["context"] or state.get("_sync_context")
 
 
 def _get_refs(state: dict, page_id: str) -> dict[str, dict]:
@@ -2554,15 +2571,6 @@ async def _action_wait_for(
         )
 
 
-async def cleanup_workspace_browser(workspace_id: str) -> None:
-    """Stop and remove the browser state for a workspace. Called by workspace.stop()."""
-    if workspace_id not in _workspace_states:
-        return
-    state = _workspace_states[workspace_id]
-    await _action_stop(state)
-    _workspace_states.pop(workspace_id, None)
-
-
 async def browser_use(  # pylint: disable=R0911,R0912
     action: str,
     url: str = "",
@@ -2888,7 +2896,8 @@ async def browser_use(  # pylint: disable=R0911,R0912
         if action == "close":
             return await _action_close(state, page_id)
         if action == "cookies_get":
-            if not state["context"]:
+            ctx = _get_context(state)
+            if not ctx:
                 return _tool_response(
                     json.dumps(
                         {"ok": False, "error": "Browser not started"},
@@ -2896,9 +2905,12 @@ async def browser_use(  # pylint: disable=R0911,R0912
                         indent=2,
                     ),
                 )
-            urls_list = _parse_json_param(url, []) if url else []
+            urls_list = _parse_json_param(url, None) if url else None
+            if urls_list is None and url:
+                urls_list = [url]
+            urls_list = urls_list or []
             try:
-                cookies = await state["context"].cookies(
+                cookies = await ctx.cookies(
                     urls=urls_list if urls_list else [],
                 )
                 return _tool_response(
@@ -2917,7 +2929,8 @@ async def browser_use(  # pylint: disable=R0911,R0912
                     ),
                 )
         if action == "cookies_set":
-            if not state["context"]:
+            ctx = _get_context(state)
+            if not ctx:
                 return _tool_response(
                     json.dumps(
                         {"ok": False, "error": "Browser not started"},
@@ -2927,7 +2940,24 @@ async def browser_use(  # pylint: disable=R0911,R0912
                 )
             try:
                 cookies = json.loads(fields_json) if fields_json else []
-                await state["context"].add_cookies(cookies)
+                if not isinstance(cookies, list) or not all(
+                    isinstance(c, dict) and "name" in c and "value" in c
+                    for c in cookies
+                ):
+                    return _tool_response(
+                        json.dumps(
+                            {
+                                "ok": False,
+                                "error": (
+                                    "fields_json must be a JSON array of"
+                                    " cookie objects with 'name' and 'value'"
+                                ),
+                            },
+                            ensure_ascii=False,
+                            indent=2,
+                        ),
+                    )
+                await ctx.add_cookies(cookies)
                 return _tool_response(
                     json.dumps(
                         {
@@ -2947,7 +2977,8 @@ async def browser_use(  # pylint: disable=R0911,R0912
                     ),
                 )
         if action == "cookies_clear":
-            if not state["context"]:
+            ctx = _get_context(state)
+            if not ctx:
                 return _tool_response(
                     json.dumps(
                         {"ok": False, "error": "Browser not started"},
@@ -2956,7 +2987,7 @@ async def browser_use(  # pylint: disable=R0911,R0912
                     ),
                 )
             try:
-                await state["context"].clear_cookies()
+                await ctx.clear_cookies()
                 return _tool_response(
                     json.dumps(
                         {"ok": True, "message": "All cookies cleared"},
