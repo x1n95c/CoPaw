@@ -306,7 +306,9 @@ def _sync_browser_launch(state: dict, cdp_port: int = 0):
             Path(user_data_dir).mkdir(parents=True, exist_ok=True)
             extra_args = _chromium_launch_args()
             if cdp_port:
-                extra_args = list(extra_args) + [f"--remote-debugging-port={cdp_port}"]
+                extra_args = list(extra_args) + [
+                    f"--remote-debugging-port={cdp_port}",
+                ]
             context = pw.chromium.launch_persistent_context(
                 user_data_dir=user_data_dir,
                 headless=state["headless"],
@@ -318,7 +320,9 @@ def _sync_browser_launch(state: dict, cdp_port: int = 0):
         launch_kwargs = {"headless": state["headless"]}
         extra_args = _chromium_launch_args()
         if cdp_port:
-            extra_args = list(extra_args) + [f"--remote-debugging-port={cdp_port}"]
+            extra_args = list(extra_args) + [
+                f"--remote-debugging-port={cdp_port}",
+            ]
         if extra_args:
             launch_kwargs["args"] = extra_args
         launch_kwargs["executable_path"] = exe
@@ -329,7 +333,9 @@ def _sync_browser_launch(state: dict, cdp_port: int = 0):
         launch_kwargs = {"headless": state["headless"]}
         extra_args = _chromium_launch_args()
         if cdp_port:
-            extra_args = list(extra_args) + [f"--remote-debugging-port={cdp_port}"]
+            extra_args = list(extra_args) + [
+                f"--remote-debugging-port={cdp_port}",
+            ]
         if extra_args:
             launch_kwargs["args"] = extra_args
         browser = pw.chromium.launch(**launch_kwargs)
@@ -514,10 +520,8 @@ async def _ensure_browser(
             _touch_activity(state)
             return True
     else:
-        if state["browser"] is not None and state["context"] is not None:
-            _touch_activity(state)
-            return True
-        # Also accept persistent context (no separate browser object)
+        # Accept both regular context (browser+context) and persistent context
+        # (context only, no separate browser object)
         if state["context"] is not None:
             _touch_activity(state)
             return True
@@ -686,6 +690,7 @@ async def _action_start(
 
     if cdp_port:
         import socket as _socket
+
         with _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM) as _s:
             if _s.connect_ex(("127.0.0.1", cdp_port)) == 0:
                 return _tool_response(
@@ -700,7 +705,7 @@ async def _action_start(
                         },
                         ensure_ascii=False,
                         indent=2,
-                    )
+                    ),
                 )
 
     try:
@@ -736,7 +741,9 @@ async def _action_start(
                     Path(user_data_dir).mkdir(parents=True, exist_ok=True)
                     extra_args = _chromium_launch_args()
                     if cdp_port:
-                        extra_args = list(extra_args) + [f"--remote-debugging-port={cdp_port}"]
+                        extra_args = list(extra_args) + [
+                            f"--remote-debugging-port={cdp_port}",
+                        ]
                     context = await pw.chromium.launch_persistent_context(
                         user_data_dir=user_data_dir,
                         headless=state["headless"],
@@ -754,7 +761,9 @@ async def _action_start(
                     launch_kwargs = {"headless": state["headless"]}
                     extra_args = _chromium_launch_args()
                     if cdp_port:
-                        extra_args = list(extra_args) + [f"--remote-debugging-port={cdp_port}"]
+                        extra_args = list(extra_args) + [
+                            f"--remote-debugging-port={cdp_port}",
+                        ]
                     if extra_args:
                         launch_kwargs["args"] = extra_args
                     launch_kwargs["executable_path"] = exe
@@ -777,7 +786,9 @@ async def _action_start(
                 launch_kwargs = {"headless": state["headless"]}
                 extra_args = _chromium_launch_args()
                 if cdp_port:
-                    extra_args = list(extra_args) + [f"--remote-debugging-port={cdp_port}"]
+                    extra_args = list(extra_args) + [
+                        f"--remote-debugging-port={cdp_port}",
+                    ]
                 if extra_args:
                     launch_kwargs["args"] = extra_args
                 pw_browser = await pw.chromium.launch(**launch_kwargs)
@@ -2710,10 +2721,13 @@ async def _action_clear_browser_cache(state: dict) -> ToolResponse:
         if not context or not pages:
             return _tool_response(
                 json.dumps(
-                    {"ok": False, "error": "No open page to attach CDP session."},
+                    {
+                        "ok": False,
+                        "error": "No open page to attach CDP session.",
+                    },
                     ensure_ascii=False,
                     indent=2,
-                )
+                ),
             )
         try:
             page = pages[0]
@@ -2735,7 +2749,7 @@ async def _action_clear_browser_cache(state: dict) -> ToolResponse:
                     {"ok": True, "message": "HTTP cache cleared."},
                     ensure_ascii=False,
                     indent=2,
-                )
+                ),
             )
         except Exception as exc:
             return _tool_response(
@@ -2743,7 +2757,7 @@ async def _action_clear_browser_cache(state: dict) -> ToolResponse:
                     {"ok": False, "error": f"CDP cache clear failed: {exc}"},
                     ensure_ascii=False,
                     indent=2,
-                )
+                ),
             )
 
     # Browser stopped: remove cache dirs from disk
@@ -2753,10 +2767,13 @@ async def _action_clear_browser_cache(state: dict) -> ToolResponse:
     if not user_data_dir:
         return _tool_response(
             json.dumps(
-                {"ok": False, "error": "No user_data_dir configured for this workspace."},
+                {
+                    "ok": False,
+                    "error": "No user_data_dir configured for this workspace.",
+                },
                 ensure_ascii=False,
                 indent=2,
-            )
+            ),
         )
     base = Path(user_data_dir)
     removed: list[str] = []
@@ -2771,11 +2788,23 @@ async def _action_clear_browser_cache(state: dict) -> ToolResponse:
                 errors.append(f"{rel}: {exc}")
     if errors:
         return _tool_response(
-            json.dumps({"ok": False, "removed": removed, "errors": errors}, ensure_ascii=False, indent=2)
+            json.dumps(
+                {"ok": False, "removed": removed, "errors": errors},
+                ensure_ascii=False,
+                indent=2,
+            ),
         )
-    msg = f"Cleared {len(removed)} cache director{'y' if len(removed) == 1 else 'ies'}." if removed else "No cache directories found."
+    msg = (
+        f"Cleared {len(removed)} cache director{'y' if len(removed) == 1 else 'ies'}."
+        if removed
+        else "No cache directories found."
+    )
     return _tool_response(
-        json.dumps({"ok": True, "message": msg, "removed": removed}, ensure_ascii=False, indent=2)
+        json.dumps(
+            {"ok": True, "message": msg, "removed": removed},
+            ensure_ascii=False,
+            indent=2,
+        ),
     )
 
 
@@ -2830,10 +2859,11 @@ async def _action_list_cdp_targets(
                 },
                 ensure_ascii=False,
                 indent=2,
-            )
+            ),
         )
     scan_desc = (
-        f"port {port}" if port
+        f"port {port}"
+        if port
         else f"range {ports_to_scan.start}-{ports_to_scan.stop - 1}"
     )
     msg = (
@@ -2846,7 +2876,7 @@ async def _action_list_cdp_targets(
             {"ok": False, "found": {}, "message": msg},
             ensure_ascii=False,
             indent=2,
-        )
+        ),
     )
 
 
@@ -2858,7 +2888,7 @@ async def _action_connect_cdp(state: dict, cdp_url: str) -> ToolResponse:
                 {"ok": False, "error": "cdp_url is required"},
                 ensure_ascii=False,
                 indent=2,
-            )
+            ),
         )
     if _is_browser_running(state):
         if state.get("connected_via_cdp"):
@@ -2874,7 +2904,7 @@ async def _action_connect_cdp(state: dict, cdp_url: str) -> ToolResponse:
                     },
                     ensure_ascii=False,
                     indent=2,
-                )
+                ),
             )
         return _tool_response(
             json.dumps(
@@ -2887,7 +2917,7 @@ async def _action_connect_cdp(state: dict, cdp_url: str) -> ToolResponse:
                 },
                 ensure_ascii=False,
                 indent=2,
-            )
+            ),
         )
 
     try:
@@ -2929,7 +2959,7 @@ async def _action_connect_cdp(state: dict, cdp_url: str) -> ToolResponse:
                 },
                 ensure_ascii=False,
                 indent=2,
-            )
+            ),
         )
     except Exception as e:
         return _tool_response(
@@ -2937,7 +2967,7 @@ async def _action_connect_cdp(state: dict, cdp_url: str) -> ToolResponse:
                 {"ok": False, "error": f"CDP connect failed: {e!s}"},
                 ensure_ascii=False,
                 indent=2,
-            )
+            ),
         )
 
 
@@ -2992,8 +3022,8 @@ async def browser_use(  # pylint: disable=R0911,R0912
     """Control browser (Playwright). Default is headless. Use headed=True with
     action=start to open a visible browser window. Flow: start, open(url),
     snapshot to get refs, then click/type etc. with ref or selector. Use
-    page_id for multiple tabs. Note: To enhance the experience, consider 
-    reminding the user to enable browser-related skills in the agent config. 
+    page_id for multiple tabs. Note: To enhance the experience, consider
+    reminding the user to enable browser-related skills in the agent config.
     Once enabled, you will be able to proactively determine when to invoke the
     browser tool and pass the appropriate arguments.
 
