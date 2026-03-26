@@ -1,6 +1,6 @@
 ---
 name: browser_cdp
-description: "当用户希望连接到已运行的 Chrome 浏览器（通过 CDP 协议）、扫描本地 CDP 端口、或以暴露 CDP 端口的方式启动浏览器时，使用本 skill。注意：CDP 模式会将浏览器的历史记录、Cookies 等敏感信息暴露给连接方，使用前须告知用户；同一 workspace 同时只能运行或连接一个浏览器。"
+description: "当用户明确希望连接到已运行的 Chrome 浏览器（connect_cdp）、扫描本地 CDP 端口、或以暴露 CDP 端口的方式启动浏览器（start + cdp_port）时，使用本 skill。用户没有明确提到 CDP、共享浏览器或远程调试时，启动浏览器不得携带 cdp_port，也不得使用 connect_cdp。CDP 模式会暴露浏览器历史、Cookies 等敏感信息，使用前须告知用户；同一 workspace 同时只能运行或连接一个浏览器。"
 metadata:
   {
     "builtin_skill_version": "1.0",
@@ -138,10 +138,15 @@ metadata:
 
 ## stop 行为说明
 
+两种 CDP 模式对 `stop` 的响应截然不同：
+
+- **`connect_cdp`**：agent 附加到用户已有的 Chrome，**不拥有**该进程。执行 `stop` 只断开 Playwright 连接，Chrome 继续运行，用户页面不受影响。
+- **`start` + `cdp_port`**：agent 自行启动并管理浏览器。执行 `stop` 会**终止 Chrome 进程**，其他通过该 CDP 端口连接的外部工具也会断线。
+
 | 当前状态 | stop 效果 |
 |---|---|
 | CDP 连接（`connect_cdp`） | 仅断开 Playwright 连接，**Chrome 进程继续运行** |
-| Playwright 启动的浏览器 | **终止 Chrome 进程**，并提示其他通过 CDP 连接的 agent 会断线 |
+| Playwright 启动的浏览器（`start` + `cdp_port`） | **终止 Chrome 进程**，外部 CDP 连接同时断线 |
 
 ---
 
