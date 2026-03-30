@@ -209,13 +209,12 @@ In Console, go to **Settings → Models** to configure. See the
 
 - Cloud models: enter the provider API key (e.g. ModelScope, DashScope, or a
   custom provider).
-- Local models: supports `CoPaw Local (llama.cpp)`, Ollama, and LM Studio.
+- Local models: supports `llama.cpp`, LM Studio and Ollama.
 
 After configuration, choose the target provider and model under **Default LLM**
 at the top of the Models page and **Save** — that becomes the global default.
 
-To use a different model per agent, switch the agent with the selector at the
-top of Console, then pick a model in the top-left of the **Chat** page for that
+To use a different model per agent, switch the agent with the selector at the top-left of Console, then pick a model in the top-right of the **Chat** page for that
 agent.
 
 You can also use `copaw models` for setup, downloads, and switching. See

@@ -38,7 +38,7 @@ const cards = [
   {
     key: "apps",
     icon: "/explore-apps.svg",
-    href: "https://developer.aliyun.com/article/1713682",
+    href: "",
   },
   // {
   //   key: "memory",
@@ -91,39 +91,45 @@ export function CopawWorksForYou() {
               className="grid gap-0 divide-y divide-[#f1e5dc] md:grid-cols-3 md:gap-x-10 md:gap-y-12 md:divide-y-0"
               variants={item}
             >
-              {cards.map((card) => (
-                <article
-                  key={card.key}
-                  className="flex h-full flex-col py-6 first:pt-0 last:pb-0 md:py-0"
-                >
-                  <img
-                    src={card.icon}
-                    alt=""
-                    aria-hidden
-                    className="h-20 w-20 object-contain opacity-80 md:h-23 md:w-23"
-                  />
-                  <h3 className="font-newsreader mt-3 text-[1.65rem] leading-[1.1] text-(--color-text) sm:text-[1.8rem] md:mt-4 md:text-[1.8rem]">
-                    {t(`worksForYou.cards.${card.key}.title`)}
-                  </h3>
-                  <p className="font-inter mt-2 text-[13px] leading-[1.65] text-(--color-text-secondary) md:text-base">
-                    {t(`worksForYou.cards.${card.key}.desc`)}
-                  </p>
-                  <a
-                    href={card.href}
-                    className="font-inter mt-auto inline-flex w-fit items-center gap-2 pt-4 text-[0.95rem] text-(--color-text) transition hover:text-orange-400! md:pt-5 md:text-base"
-                    {...(card.href.startsWith("http://") ||
-                    card.href.startsWith("https://")
-                      ? {
-                          target: "_blank",
-                          rel: "noopener noreferrer",
-                        }
-                      : {})}
+              {cards.map((card) => {
+                const href =
+                  card.key === "apps"
+                    ? t("worksForYou.cards.apps.learnMoreHref")
+                    : card.href;
+                return (
+                  <article
+                    key={card.key}
+                    className="flex h-full flex-col py-6 first:pt-0 last:pb-0 md:py-0"
                   >
-                    {t("worksForYou.learnMore")}
-                    <span aria-hidden>→</span>
-                  </a>
-                </article>
-              ))}
+                    <img
+                      src={card.icon}
+                      alt=""
+                      aria-hidden
+                      className="h-20 w-20 object-contain opacity-80 md:h-23 md:w-23"
+                    />
+                    <h3 className="font-newsreader mt-3 text-[1.65rem] leading-[1.1] text-(--color-text) sm:text-[1.8rem] md:mt-4 md:text-[1.8rem]">
+                      {t(`worksForYou.cards.${card.key}.title`)}
+                    </h3>
+                    <p className="font-inter mt-2 text-[13px] leading-[1.65] text-(--color-text-secondary) md:text-base">
+                      {t(`worksForYou.cards.${card.key}.desc`)}
+                    </p>
+                    <a
+                      href={href}
+                      className="font-inter mt-auto inline-flex w-fit items-center gap-2 pt-4 text-[0.95rem] text-(--color-text) transition hover:text-orange-400! md:pt-5 md:text-base"
+                      {...(href.startsWith("http://") ||
+                      href.startsWith("https://")
+                        ? {
+                            target: "_blank",
+                            rel: "noopener noreferrer",
+                          }
+                        : {})}
+                    >
+                      {t("worksForYou.learnMore")}
+                      <span aria-hidden>→</span>
+                    </a>
+                  </article>
+                );
+              })}
             </motion.div>
             <div
               className="pointer-events-none absolute bottom-0 left-1/2 h-px w-screen -translate-x-1/2 animate-[copaw-dash-move-left_1s_linear_infinite]"

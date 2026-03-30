@@ -16,8 +16,7 @@
     "slogan": "懂你所需，伴你左右",
     "sub": "安装极简、本地与云上均可部署；支持多端接入、能力轻松扩展。",
     "cta": "查看文档",
-    "quickStart": "快速开始",
-    "pipInstall": "Pip 安装"
+    "quickStart": "快速开始"
   },
   "follow": {
     "title": "关注我们",
@@ -54,8 +53,9 @@
         "desc": "一进程多工作区，配置与数据隔离，请求按 Agent 路由；支持分工扩展，Agent 之间可通信协作。"
       },
       "apps": {
-        "title": "端云协同",
-        "desc": "可配置本地或云端模型与供应商；离线环境仍可推理。面向 CoPaw 能力优化的端侧小模型即将发布，便于端云协同与成本可控。"
+        "title": "CoPaw 定制模型",
+        "desc": "CoPaw 专门定制的本地小模型 CoPaw-Flash 已上线，围绕 CoPaw 核心场景优化，兼顾使用体验、推理成本与隐私安全。",
+        "learnMoreHref": "https://www.modelscope.cn/organization/AgentScope"
       },
       "memory": {
         "title": "记忆",
@@ -143,10 +143,6 @@
       "research": {
         "title": "研究与学习",
         "description": "CoPaw 追踪重要的公司动态，构建个人知识库，便于检索与复用。"
-      },
-      "assistant": {
-        "title": "桌面与文件",
-        "description": "CoPaw 帮你整理、搜索和摘要本地文件，并将所需文档直接发送到对话中。"
       }
     }
   },
@@ -359,7 +355,7 @@
         "li2Prefix": "本地模型：支持",
         "li2Suffix": "以及 Ollama。",
         "p2": "配置完成后，在 Models 页面顶部的 Default LLM 选择目标供应商与模型并保存，即成为全局默认模型。",
-        "p3": "若希望为不同 Agent 使用不同模型，可在 Console 顶部切换 Agent，然后在 Chat 页左上角为该 Agent 选择模型。",
+        "p3": "若希望为不同 Agent 使用不同模型，可在 Console 左上角切换 Agent，然后在 Chat 页右上角为该 Agent 选择模型。",
         "p4Prefix": "你也可以使用",
         "p4Mid": "进行配置、下载与切换。详见",
         "cliLink": "CLI → Models and environment variables → copaw models",

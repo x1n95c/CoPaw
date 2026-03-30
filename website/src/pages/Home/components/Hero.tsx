@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "motion/react";
-import { Check } from "lucide-react";
-import { DottedlinedownArrowIcon, CopyIcon } from "@/components/Icon";
-import { PIP_INSTALL_COMMANDS } from "./QuickStart";
+import { DottedlinedownArrowIcon } from "@/components/Icon";
 
 const container = {
   hidden: { opacity: 0, y: 14 },
@@ -30,7 +28,6 @@ const item = {
 
 export function CopawHero() {
   const { t } = useTranslation();
-  const [pipCopied, setPipCopied] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [showIdle, setShowIdle] = useState(false);
   const [idlePlayedOnce, setIdlePlayedOnce] = useState(false);
@@ -70,16 +67,6 @@ export function CopawHero() {
     const section = document.getElementById("copaw-quickstart");
     if (!section) return;
     section.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const copyPipCommands = async () => {
-    try {
-      await navigator.clipboard.writeText(PIP_INSTALL_COMMANDS.join("\n"));
-      setPipCopied(true);
-      setTimeout(() => setPipCopied(false), 1600);
-    } catch {
-      setPipCopied(false);
-    }
   };
 
   const mascotSrc = !showIdle
@@ -155,23 +142,6 @@ export function CopawHero() {
             >
               <DottedlinedownArrowIcon />
               <span>{t("hero.quickStart")}</span>
-            </button>
-            <button
-              type="button"
-              onClick={copyPipCommands}
-              className="inline-flex h-11 w-full max-w-60 items-center justify-center gap-1.5 rounded-lg border border-[#F3F1F0] bg-white px-4 text-[15px] font-normal text-[#555] transition hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400 sm:h-10 sm:w-auto sm:max-w-none"
-              aria-label={pipCopied ? t("docs.copied") : t("docs.copy")}
-            >
-              {pipCopied ? (
-                <Check
-                  className="h-4 w-4 shrink-0"
-                  strokeWidth={2.25}
-                  aria-hidden
-                />
-              ) : (
-                <CopyIcon className="h-4 w-4 shrink-0" aria-hidden />
-              )}
-              <span>{pipCopied ? t("docs.copied") : t("hero.pipInstall")}</span>
             </button>
           </motion.div>
 

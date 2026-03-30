@@ -8,8 +8,6 @@ const AGENTSCOPE_REPO = "https://github.com/agentscope-ai/agentscope";
 const AGENTSCOPE_RUNTIME =
   "https://github.com/agentscope-ai/agentscope-runtime";
 const REME_REPO = "https://github.com/agentscope-ai/ReMe";
-const ANTHROPIC_SKILLS_URL =
-  "https://github.com/anthropics/skills?tab=readme-ov-file";
 
 const X_URL = "https://x.com/agentscope_ai";
 const DISCORD_URL = "https://discord.com/invite/eYMpfnkG8h";
@@ -17,11 +15,6 @@ const DINGTALK_URL =
   "https://qr.dingtalk.com/action/joingroup?code=v1,k1,1k7GcVwa5PzZWRaWyBA5OFImW0zNNx1Gj9RkjnuKVGY=&_dt_no_comment=1&origin=1";
 const XIAOHONGSHU_URL =
   "https://www.xiaohongshu.com/user/profile/691c18db0000000037032be9";
-const TERMS_URL =
-  "https://www.alibabacloud.com/help/en/legal/latest/terms-of-service";
-const PRIVACY_URL =
-  "https://www.alibabacloud.com/help/en/legal/latest/alibaba-cloud-international-website-privacy-policy";
-
 export function Footer() {
   const { t } = useTranslation();
   const linkClass =
@@ -31,8 +24,8 @@ export function Footer() {
   return (
     <footer className="mt-auto bg-white">
       <div className="mx-auto max-w-7xl px-6 py-10 md:py-12">
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-60">
-          <section>
+        <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-16">
+          <section className="min-w-0 max-w-xl">
             <Link to="/" className="inline-flex items-center mb-4">
               <CopawMascot size={80} />
             </Link>
@@ -104,7 +97,7 @@ export function Footer() {
             </div>
           </section>
 
-          <section className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <section className="shrink-0 lg:ml-auto lg:text-right">
             <div className="space-y-3">
               <h4 className={sectionTitleClass}>
                 {t("footer.sections.builtBy")}
@@ -142,65 +135,7 @@ export function Footer() {
                 {t("footer.poweredBy.reme")}
               </a>
             </div>
-
-            <div className="space-y-3">
-              <h4 className={sectionTitleClass}>
-                {t("footer.sections.resources")}
-              </h4>
-              <Link to="/docs" className={linkClass}>
-                {t("footer.links.docs")}
-              </Link>
-              <a
-                href="https://github.com/agentscope-ai/CoPaw/discussions"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={linkClass}
-              >
-                {t("footer.links.blog")}
-              </a>
-              <Link to="/release-notes" className={linkClass}>
-                {t("footer.links.changelog")}
-              </Link>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className={sectionTitleClass}>
-                {t("footer.sections.terms")}
-              </h4>
-              <a
-                href={TERMS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={linkClass}
-              >
-                {t("footer.links.termsOfService")}
-              </a>
-              <a
-                href={PRIVACY_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={linkClass}
-              >
-                {t("footer.links.privacyPolicy")}
-              </a>
-            </div>
           </section>
-        </div>
-
-        <div className="mt-10 pt-6 text-base text-(--text-muted)">
-          <p>
-            {t("footer.thanksSkills.text")}
-            <a
-              href={ANTHROPIC_SKILLS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-(--color-primary)! transition-colors"
-            >
-              {t("footer.thanksSkills.name")}
-            </a>
-            {t("footer.thanksSkills.suffix")}
-          </p>
-          <p className="mt-2">{t("footer.copyright")}</p>
         </div>
       </div>
     </footer>

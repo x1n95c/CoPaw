@@ -4,9 +4,6 @@ import { useTranslation } from "react-i18next";
 const CHANNEL_ICON_BASE = "/channelsIcon";
 
 const TOP_CHANNELS = [
-  { iconSrc: `${CHANNEL_ICON_BASE}/Clause.png`, name: "Clause" },
-  { iconSrc: `${CHANNEL_ICON_BASE}/WhatsApp.png`, name: "WhatsApp" },
-  { iconSrc: `${CHANNEL_ICON_BASE}/X.png`, name: "X" },
   { iconSrc: `${CHANNEL_ICON_BASE}/WeChar.png`, name: "WeChat" },
   { iconSrc: `${CHANNEL_ICON_BASE}/Xiaoyi.png`, name: "Xiaoyi" },
   { iconSrc: `${CHANNEL_ICON_BASE}/Wattermost.png`, name: "Mattermost" },
@@ -17,16 +14,6 @@ const TOP_CHANNELS = [
   { iconSrc: `${CHANNEL_ICON_BASE}/DingTalk.png`, name: "DingTalk" },
   { iconSrc: `${CHANNEL_ICON_BASE}/Matrix.png`, name: "Matrix" },
   { iconSrc: `${CHANNEL_ICON_BASE}/Telegram.png`, name: "Telegram" },
-];
-
-const BOTTOM_CHANNELS = [
-  { iconSrc: `${CHANNEL_ICON_BASE}/Doubao.png`, name: "Doubao" },
-  { iconSrc: `${CHANNEL_ICON_BASE}/Deepseek.png`, name: "Deepseek" },
-  { iconSrc: `${CHANNEL_ICON_BASE}/ChatFPT.png`, name: "ChatGPT" },
-  { iconSrc: `${CHANNEL_ICON_BASE}/Gmail.png`, name: "Gmail" },
-  { iconSrc: `${CHANNEL_ICON_BASE}/NetEaseMusic.png`, name: "NetEaseMusic" },
-  { iconSrc: `${CHANNEL_ICON_BASE}/Spotify.png`, name: "Spotify" },
-  { iconSrc: `${CHANNEL_ICON_BASE}/Github.png`, name: "Github" },
   { iconSrc: `${CHANNEL_ICON_BASE}/iMessage.png`, name: "iMessage" },
 ];
 
@@ -118,18 +105,6 @@ export function CopawChannels() {
             {[...TOP_CHANNELS, ...TOP_CHANNELS].map((item, idx) => (
               <ChannelPill
                 key={`${item.name}-${idx}`}
-                iconSrc={item.iconSrc}
-                name={item.name}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="group/row-bottom mt-3 overflow-hidden">
-          <div className="inline-flex w-max items-center gap-3 whitespace-nowrap py-2 will-change-transform animate-[copaw-channels-marquee-left_48s_linear_infinite] group-hover/row-bottom:[animation-play-state:paused]">
-            {[...BOTTOM_CHANNELS, ...BOTTOM_CHANNELS].map((item, idx) => (
-              <ChannelPill
-                key={`${item.name}-bottom-${idx}`}
                 iconSrc={item.iconSrc}
                 name={item.name}
               />

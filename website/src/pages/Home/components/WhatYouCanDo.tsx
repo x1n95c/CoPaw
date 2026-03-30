@@ -3,12 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useTranslation } from "react-i18next";
 import { sectionStyles } from "@/lib/utils";
 
-type UseCaseKey =
-  | "social"
-  | "creative"
-  | "productivity"
-  | "research"
-  | "assistant";
+type UseCaseKey = "social" | "creative" | "productivity" | "research";
 
 const CATEGORY_CONFIG: Array<{
   key: UseCaseKey;
@@ -42,13 +37,6 @@ const CATEGORY_CONFIG: Array<{
       "https://img.alicdn.com/imgextra/i3/O1CN01oybwPf1vKaWII7bmm_!!6000000006154-2-tps-1962-1096.png",
     preview:
       "https://img.alicdn.com/imgextra/i1/O1CN018Vqtpf1PvARqdLsr7_!!6000000001902-2-tps-1362-894.png",
-  },
-  {
-    key: "assistant",
-    background:
-      "https://img.alicdn.com/imgextra/i2/O1CN01fMrv5W1zWH5afE9Mo_!!6000000006721-2-tps-1870-1044.png",
-    preview:
-      "https://img.alicdn.com/imgextra/i3/O1CN01JMNght1rPOD1Gp4Ts_!!6000000005623-2-tps-1362-894.png",
   },
 ];
 

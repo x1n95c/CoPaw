@@ -16,8 +16,7 @@
     "slogan": "Works for you, grows with you",
     "sub": "Easy to install, deploy on your own machine & on the cloud; supports multiple IM Apps; with easily extensible capabilities.",
     "cta": "Read the docs",
-    "quickStart": "Quick Start",
-    "pipInstall": "Pip Install"
+    "quickStart": "Quick Start"
   },
   "follow": {
     "title": "Follow us",
@@ -54,8 +53,9 @@
         "desc": "Multiple isolated workspaces in one process—split config and data, route each request to the right agent; scale out roles and let agents message each other when tasks need teamwork."
       },
       "apps": {
-        "title": "Edge & Cloud LLMs",
-        "desc": "Wire up local or cloud providers your way; keep inferring when you're offline. A CoPaw-tuned on-device small model is coming soon for edge–cloud teamwork and predictable cost."
+        "title": "CoPaw Custom Models",
+        "desc": "CoPaw-Flash, CoPaw's custom on-device small model, is now available—optimized for core CoPaw workflows with a strong balance of usability, cost efficiency, and privacy.",
+        "learnMoreHref": "https://huggingface.co/agentscope-ai"
       },
       "memory": {
         "title": "Memory",
@@ -143,10 +143,6 @@
       "research": {
         "title": "Research & learning",
         "description": "CoPaw tracks important company updates and builds your personal knowledge base for easy retrieval and reuse."
-      },
-      "assistant": {
-        "title": "Desktop & files",
-        "description": "CoPaw helps you organize, search, and summarize local files, and send requested documents directly into your chat."
       }
     }
   },
@@ -359,7 +355,7 @@
         "li2Prefix": "Local models: supports",
         "li2Suffix": "and Ollama.",
         "p2": "After configuration, choose the target provider and model under Default LLM at the top of the Models page and Save — that becomes the global default.",
-        "p3": "To use a different model per agent, switch the agent with the selector at the top of Console, then pick a model in the top-left of the Chat page for that agent.",
+        "p3": "To use a different model per agent, switch the agent with the selector at the top-left of Console, then pick a model in the top-right of the Chat page for that agent.",
         "p4Prefix": "You can also use",
         "p4Mid": "for setup, downloads, and switching. See",
         "cliLink": "CLI → Models and environment variables → copaw models",
