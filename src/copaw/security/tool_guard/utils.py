@@ -25,6 +25,7 @@ _DEFAULT_GUARDED_TOOLS = frozenset(
         "send_file_to_user",
         "view_text_file",
         "write_text_file",
+        "spawn_agent",
     },
 )
 

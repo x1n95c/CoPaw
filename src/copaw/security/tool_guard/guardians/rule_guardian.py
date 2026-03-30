@@ -41,6 +41,7 @@ _DEFAULT_RULES_DIR = Path(__file__).resolve().parent.parent / "rules"
 # Default rule files loaded when no explicit rules_dir is provided.
 _DEFAULT_RULE_FILES: list[str] = [
     "dangerous_shell_commands.yaml",
+    "spawn_agent_commands.yaml",
 ]
 
 

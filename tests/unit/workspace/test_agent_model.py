@@ -8,6 +8,11 @@ from pydantic import ValidationError
 from copaw.config.config import (
     AgentProfileConfig,
     AgentsRunningConfig,
+    SpawnAgentConfig,
+    SpawnAgentRunnerConfig,
+    ToolsConfig,
+    get_default_spawn_agent_runners,
+    resolve_spawn_agent_runners,
     load_agent_config,
     save_agent_config,
 )
@@ -251,6 +256,73 @@ def test_model_config_included_when_set(
     assert "active_model" in raw_data
     assert raw_data["active_model"]["provider_id"] == "openai"
     assert raw_data["active_model"]["model"] == "gpt-4-turbo"
+
+
+def test_spawn_agent_config_persists_across_reload(
+    mock_agent_workspace,
+):  # pylint: disable=redefined-outer-name,unused-argument
+    """Test per-agent spawn_agent runner config round-trips cleanly."""
+    agent_config = load_agent_config("test_agent")
+    agent_config.spawn_agent = SpawnAgentConfig(
+        runners={
+            "codex": SpawnAgentRunnerConfig(
+                enabled=True,
+                description="Codex runner",
+                command="codex",
+                args=["exec", "{task}"],
+                env={"FOO": "bar"},
+                cwd="delegation",
+            ),
+        },
+    )
+    save_agent_config("test_agent", agent_config)
+
+    reloaded = load_agent_config("test_agent")
+    assert reloaded.spawn_agent is not None
+    assert "codex" in reloaded.spawn_agent.runners
+    runner = reloaded.spawn_agent.runners["codex"]
+    assert runner.enabled is True
+    assert runner.command == "codex"
+    assert runner.args == ["exec", "{task}"]
+    assert runner.env == {"FOO": "bar"}
+    assert runner.cwd == "delegation"
+
+
+def test_spawn_agent_builtin_tool_defaults_disabled():
+    """Test spawn_agent exists in default tools and is disabled."""
+    tools = ToolsConfig()
+
+    assert "spawn_agent" in tools.builtin_tools
+    assert tools.builtin_tools["spawn_agent"].enabled is False
+
+
+def test_spawn_agent_builtin_runner_presets_exist():
+    """Test built-in runner presets are available without workspace config."""
+    runners = get_default_spawn_agent_runners()
+
+    assert "opencode" in runners
+    assert "qwen" in runners
+    assert "gemini" in runners
+    assert runners["qwen"].args == ["--approval-mode", "yolo", "{task}"]
+
+
+def test_spawn_agent_runner_overrides_replace_builtin_defaults():
+    """Test per-agent runner config overrides built-in presets by name."""
+    resolved = resolve_spawn_agent_runners(
+        SpawnAgentConfig(
+            runners={
+                "qwen": SpawnAgentRunnerConfig(
+                    enabled=True,
+                    command="custom-qwen",
+                    args=["--custom", "{task}"],
+                ),
+            },
+        ),
+    )
+
+    assert resolved["qwen"].command == "custom-qwen"
+    assert resolved["qwen"].args == ["--custom", "{task}"]
+    assert "opencode" in resolved
 
 
 def test_agent_running_config_has_llm_retry_defaults(

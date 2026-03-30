@@ -1,0 +1,9 @@
+- id: TOOL_SPAWN_AGENT_EXTERNAL_DELEGATION
+  tools: [spawn_agent]
+  params: [task]
+  category: code_execution
+  severity: HIGH
+  patterns:
+    - "(?s).+"
+  description: "Delegating to an external runner may execute tools or code outside the current model context"
+  remediation: "Review the delegated task and confirm the external runner before continuing"

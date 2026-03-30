@@ -44,6 +44,7 @@ from .tools import (
     glob_search,
     grep_search,
     read_file,
+    spawn_agent,
     send_file_to_user,
     set_user_timezone,
     view_image,
@@ -236,6 +237,7 @@ class CoPawAgent(ToolGuardMixin, ReActAgent):
             "get_current_time": get_current_time,
             "set_user_timezone": set_user_timezone,
             "get_token_usage": get_token_usage,
+            "spawn_agent": spawn_agent,
         }
 
         multimodal = get_active_model_supports_multimodal()

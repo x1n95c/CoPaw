@@ -671,6 +671,10 @@ class AgentProfileConfig(BaseModel):
         default=None,
         description="Tools configuration for this agent",
     )
+    spawn_agent: Optional["SpawnAgentConfig"] = Field(
+        default=None,
+        description="External spawn_agent runner configuration",
+    )
     security: Optional["SecurityConfig"] = Field(
         default=None,
         description="Security configuration for this agent",
@@ -866,6 +870,77 @@ class BuiltinToolConfig(BaseModel):
     )
 
 
+class SpawnAgentRunnerConfig(BaseModel):
+    """Configuration for one external spawn_agent runner."""
+
+    enabled: bool = Field(
+        default=False,
+        description="Whether this runner can be used",
+    )
+    description: str = Field(default="", description="Runner description")
+    command: str = Field(default="", description="Executable to run")
+    args: List[str] = Field(
+        default_factory=list,
+        description="CLI args for the runner",
+    )
+    env: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Environment overrides for the runner",
+    )
+    cwd: str = Field(default="", description="Default working directory")
+
+
+class SpawnAgentConfig(BaseModel):
+    """Per-agent configuration for the spawn_agent tool."""
+
+    runners: Dict[str, SpawnAgentRunnerConfig] = Field(
+        default_factory=dict,
+        description="Configured external agent runners",
+    )
+
+
+def get_default_spawn_agent_runners() -> Dict[str, SpawnAgentRunnerConfig]:
+    """Return a fresh copy of built-in spawn_agent runner presets."""
+    return {
+        "opencode": SpawnAgentRunnerConfig(
+            enabled=True,
+            description="Built-in OpenCode runner preset",
+            command="opencode",
+            args=["run", "{task}"],
+        ),
+        "qwen": SpawnAgentRunnerConfig(
+            enabled=True,
+            description="Built-in Qwen CLI runner preset",
+            command="qwen",
+            args=["--approval-mode", "yolo", "{task}"],
+        ),
+        "gemini": SpawnAgentRunnerConfig(
+            enabled=True,
+            description="Built-in Gemini CLI runner alias preset",
+            command="npx",
+            args=["-y", "@google/gemini-cli@latest", "-p", "{task}"],
+        ),
+    }
+
+
+def resolve_spawn_agent_runners(
+    spawn_agent: Optional[SpawnAgentConfig],
+) -> Dict[str, SpawnAgentRunnerConfig]:
+    """Merge built-in runner presets with per-agent overrides."""
+    runners = {
+        name: runner.model_copy(deep=True)
+        for name, runner in get_default_spawn_agent_runners().items()
+    }
+
+    if not spawn_agent:
+        return runners
+
+    for name, runner in spawn_agent.runners.items():
+        runners[name] = runner.model_copy(deep=True)
+
+    return runners
+
+
 def _default_builtin_tools() -> Dict[str, BuiltinToolConfig]:
     """Return a fresh copy of the canonical built-in tool definitions."""
     return {
@@ -935,6 +1010,12 @@ def _default_builtin_tools() -> Dict[str, BuiltinToolConfig]:
             name="get_token_usage",
             enabled=True,
             description="Get llm token usage",
+        ),
+        "spawn_agent": BuiltinToolConfig(
+            name="spawn_agent",
+            enabled=False,
+            description="Delegate one-shot tasks to configured external "
+            "agent runners",
         ),
     }
 
