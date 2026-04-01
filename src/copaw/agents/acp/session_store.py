@@ -14,7 +14,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from .types import ACPConversationSession, utc_now
 
@@ -38,7 +38,7 @@ class ACPSessionStore:
             save_dir: Optional directory for session persistence.
         """
         self._lock = asyncio.Lock()
-        self._sessions: Dict[tuple[str, str], ACPConversationSession] = {}
+        self._sessions: dict[tuple[str, str], ACPConversationSession] = {}
         self._save_dir = Path(save_dir).expanduser() if save_dir else None
 
     async def get(
@@ -102,7 +102,7 @@ class ACPSessionStore:
         self,
         chat_id: Optional[str] = None,
         harness: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """List all sessions, optionally filtered.
 
         Args:

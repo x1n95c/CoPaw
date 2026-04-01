@@ -36,6 +36,12 @@ logger = logging.getLogger(__name__)
 PermissionHandler = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
 EventHandler = Callable[[AcpEvent], Awaitable[None]]
 
+# Default allow/reject options used for host-side permission prompts
+_DEFAULT_PERMISSION_OPTIONS = [
+    {"optionId": "allow", "kind": "allow", "title": "Allow"},
+    {"optionId": "reject", "kind": "reject", "title": "Reject"},
+]
+
 
 class ACPRuntime:
     """Manage one ACP harness process and one active chat session.
@@ -79,7 +85,7 @@ class ACPRuntime:
         self._unsafe_tool_violation_message: str | None = None
         # Suspend/resume state for non-blocking permission flow
         self._suspended_permission: SuspendedPermission | None = None
-        self._prompt_task: "asyncio.Task | None" = None
+        self._prompt_task: asyncio.Task | None = None
 
     # -----------------------------------------------------------------------
     # Lifecycle Methods
@@ -743,9 +749,8 @@ class ACPRuntime:
             method,
             params,
         )
-        # DEBUG: Log full fs request details
-        logger.info(
-            "ACP DEBUG: fs request details - path=%s, content_length=%s",
+        logger.debug(
+            "ACP fs request details - path=%s, content_length=%s",
             params.get("path"),
             len(params.get("content", "")) if params.get("content") else 0,
         )
@@ -848,10 +853,7 @@ class ACPRuntime:
                 "path": path,
                 "input": {"path": path, "content_length": content_len},
             },
-            "options": [
-                {"optionId": "allow", "kind": "allow", "title": "Allow"},
-                {"optionId": "reject", "kind": "reject", "title": "Reject"},
-            ],
+            "options": _DEFAULT_PERMISSION_OPTIONS,
         }
         await on_event(
             AcpEvent(
@@ -898,6 +900,11 @@ class ACPRuntime:
         file_path = Path(path)
         if not file_path.is_absolute():
             file_path = Path(self._cwd) / file_path
+        file_path = file_path.resolve()
+        try:
+            file_path.relative_to(Path(self._cwd).resolve())
+        except ValueError:
+            raise ValueError(f"Path traversal denied: {path}")
 
         logger.info("ACP reading file: %s", file_path)
 
@@ -922,6 +929,11 @@ class ACPRuntime:
         file_path = Path(path)
         if not file_path.is_absolute():
             file_path = Path(self._cwd) / file_path
+        file_path = file_path.resolve()
+        try:
+            file_path.relative_to(Path(self._cwd).resolve())
+        except ValueError:
+            raise ValueError(f"Path traversal denied: {path}")
 
         logger.info("ACP writing file: %s (%d bytes)", file_path, len(content))
 
@@ -1045,10 +1057,7 @@ class ACPRuntime:
                 "command": command,
                 "input": {"command": command, "cwd": params.get("cwd", self._cwd)},
             },
-            "options": [
-                {"optionId": "allow", "kind": "allow", "title": "Allow"},
-                {"optionId": "reject", "kind": "reject", "title": "Reject"},
-            ],
+            "options": _DEFAULT_PERMISSION_OPTIONS,
         }
         await on_event(
             AcpEvent(

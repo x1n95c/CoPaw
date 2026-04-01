@@ -187,9 +187,8 @@ class ACPPermissionAdapter:
         options = (
             request_payload.get("options") or tool_call.get("options") or []
         )
-        # DEBUG: Log the options received from harness
-        logger.info(
-            "ACP DEBUG: Permission request options from harness: %s",
+        logger.debug(
+            "ACP permission request options from harness: %s",
             json.dumps(options, ensure_ascii=False),
         )
         summary = self._build_summary(
@@ -208,9 +207,8 @@ class ACPPermissionAdapter:
             REJECT_OPTION_HINTS,
             fallback_to_first=False,
         )
-        # DEBUG: Log the picked options
-        logger.info(
-            "ACP DEBUG: Picked allow_option=%s, reject_option=%s",
+        logger.debug(
+            "ACP picked allow_option=%s, reject_option=%s",
             json.dumps(allow_option, ensure_ascii=False) if allow_option else None,
             json.dumps(reject_option, ensure_ascii=False) if reject_option else None,
         )
@@ -393,12 +391,12 @@ class ACPPermissionAdapter:
     ) -> dict[str, Any]:
         """Build the result payload for the selected option."""
         if option is None:
-            logger.info("ACP DEBUG: _selected_result called with None option")
+            logger.debug("ACP _selected_result called with None option, returning cancelled")
             return {"outcome": {"outcome": "cancelled"}}
 
         option_id = option.get("optionId") or option.get("id") or option.get("kind") or "selected"
-        logger.info(
-            "ACP DEBUG: _selected_result option=%s, extracted optionId=%s",
+        logger.debug(
+            "ACP _selected_result option=%s, extracted optionId=%s",
             json.dumps(option, ensure_ascii=False),
             option_id,
         )

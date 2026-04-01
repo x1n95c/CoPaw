@@ -389,9 +389,6 @@ class ACPService:
                 harness=conversation.harness,
                 request_payload=payload,
             )
-            if decision.summary:
-                payload_copy = dict(payload)
-                payload_copy["summary"] = decision.summary
             return decision.result
 
         ephemeral = not conversation.keep_session

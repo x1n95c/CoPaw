@@ -97,6 +97,7 @@ class ACPTransport:
     """
 
     STDIO_STREAM_LIMIT = 1024 * 1024  # 1MB
+    _MAX_STDERR_BUFFER_LINES = 100
 
     def __init__(self, harness_name: str, harness_config: ACPHarnessConfig):
         """Initialize the transport.
@@ -223,8 +224,14 @@ class ACPTransport:
                     self.harness_name,
                 )
             except asyncio.TimeoutError:
-                self._process.kill()
-                await self._process.wait()
+                try:
+                    self._process.kill()
+                    await self._process.wait()
+                except ProcessLookupError:
+                    logger.debug(
+                        "ACP harness %s already exited before kill",
+                        self.harness_name,
+                    )
 
         self._process = None
         self._stdout_task = None
@@ -359,10 +366,9 @@ class ACPTransport:
             )
 
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8") + b"\n"
-        # DEBUG: Log outgoing messages (especially responses to requests)
         if "id" in payload and "result" in payload:
-            logger.info(
-                "ACP DEBUG: Sending response to %s: %s",
+            logger.debug(
+                "ACP sending response to %s: %s",
                 self.harness_name,
                 data.decode("utf-8")[:500],
             )
@@ -414,9 +420,8 @@ class ACPTransport:
             if not text:
                 continue
 
-            # DEBUG: Log all raw stdout lines from harness
             logger.debug(
-                "ACP DEBUG: Raw stdout from %s: %s",
+                "ACP raw stdout from %s: %s",
                 self.harness_name,
                 text[:300],
             )
@@ -450,10 +455,9 @@ class ACPTransport:
                     message.id,
                     message.method,
                 )
-                # DEBUG: Log full request details for fs operations
                 if message.method.startswith("fs/"):
-                    logger.info(
-                        "ACP DEBUG: fs request from %s: id=%s method=%s params=%s",
+                    logger.debug(
+                        "ACP fs request from %s: id=%s method=%s params=%s",
                         self.harness_name,
                         message.id,
                         message.method,
@@ -483,7 +487,7 @@ class ACPTransport:
                 continue
 
             self._stderr_buffer.append(text)
-            if len(self._stderr_buffer) > 100:
+            if len(self._stderr_buffer) > self._MAX_STDERR_BUFFER_LINES:
                 self._stderr_buffer.pop(0)
             logger.debug(
                 "ACP harness stderr (%s): %s",

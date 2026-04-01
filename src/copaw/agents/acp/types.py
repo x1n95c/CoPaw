@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from pathlib import PurePath, PurePosixPath, PureWindowsPath
+from pathlib import PurePosixPath, PureWindowsPath
 import re
 from typing import Any, Literal, Optional
 
