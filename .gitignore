@@ -57,8 +57,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 openapi-ts*.log
-package-lock.json
-pnpm-lock.yaml
+
+# Only ignore npm lockfiles inside subpackages
+console/package-lock.json
+website/package-lock.json
 
 # MacOS
 .DS_Store
