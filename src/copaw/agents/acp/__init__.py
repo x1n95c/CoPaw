@@ -18,10 +18,6 @@ from .types import (
     ACPRunResult,
     ExternalAgentConfig,
     SuspendedPermission,
-    normalize_harness_name,
-    parse_external_agent_text,
-    merge_external_agent_configs,
-    parse_external_agent_config,
 )
 from .config import ACPConfig, ACPHarnessConfig
 from .errors import (
@@ -29,10 +25,9 @@ from .errors import (
     ACPConfigurationError,
     ACPTransportError,
     ACPProtocolError,
-    ACPPermissionError,
     ACPPermissionSuspendedError,
 )
-from .session_store import ACPSessionStore, get_session_store, init_session_store
+from .session_store import ACPSessionStore
 from .service import ACPService, get_acp_service, init_acp_service
 from .tool_guard_adapter import ACPToolGuardAdapter, ACPToolGuardDecision, get_acp_tool_guard_adapter, init_acp_tool_guard_adapter
 
@@ -44,10 +39,6 @@ __all__ = [
     "ACPRunResult",
     "ExternalAgentConfig",
     "SuspendedPermission",
-    "normalize_harness_name",
-    "parse_external_agent_text",
-    "merge_external_agent_configs",
-    "parse_external_agent_config",
     # Config
     "ACPConfig",
     "ACPHarnessConfig",
@@ -56,12 +47,9 @@ __all__ = [
     "ACPConfigurationError",
     "ACPTransportError",
     "ACPProtocolError",
-    "ACPPermissionError",
     "ACPPermissionSuspendedError",
     # Session
     "ACPSessionStore",
-    "get_session_store",
-    "init_session_store",
     # Service
     "ACPService",
     "get_acp_service",

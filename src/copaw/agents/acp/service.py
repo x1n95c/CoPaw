@@ -22,7 +22,7 @@ from .permissions import (
     build_prompt_approval_artifacts,
 )
 from .runtime import ACPRuntime
-from .session_store import ACPSessionStore, get_session_store
+from .session_store import ACPSessionStore
 from .types import (
     ACPConversationSession,
     ACPRunResult,
@@ -442,65 +442,53 @@ class ACPService:
     ) -> tuple[ACPConversationSession, bool]:
         """Get an existing conversation or create a new one.
 
+        Sessions are only resumed when an explicit ACP session ID is provided.
+
         Returns:
             Tuple of (session, is_ephemeral).
         """
-        if keep_session:
-            existing = await self._store.get(chat_id, harness)
-
-            if (
-                existing is not None
-                and existing.runtime is not None
-                and existing.runtime.transport.is_running()
-            ):
-                existing.keep_session = True
-                existing.cwd = cwd or existing.cwd
-                # Update runtime config with latest settings
-                existing.runtime.harness_config = harness_config
-                existing.runtime._permission_broker_verified = harness_config.permission_broker_verified
-                return existing, False
-
-            runtime = ACPRuntime(harness, harness_config)
-            await runtime.start(cwd or ".")
-            if existing_session_id:
-                acp_session_id = await runtime.load_session(
-                    existing_session_id,
-                    cwd,
-                )
-            else:
-                acp_session_id = await runtime.new_session(cwd)
-
-            session = ACPConversationSession(
-                chat_id=chat_id,
-                harness=harness,
-                acp_session_id=acp_session_id,
-                cwd=cwd,
-                keep_session=True,
-                capabilities=runtime.capabilities,
-                runtime=runtime,
-            )
-            await self._store.save(session)
-            return session, False
-
-        # Ephemeral session
         runtime = ACPRuntime(harness, harness_config)
         await runtime.start(cwd or ".")
+
         if existing_session_id:
+            existing = await self._store.get_session_by_acp_id(existing_session_id)
+            if existing is not None:
+                existing.chat_id = chat_id
+                existing.harness = harness
+                existing.cwd = cwd or existing.cwd
+                existing.keep_session = keep_session
+                existing.capabilities = runtime.capabilities
+                existing.runtime = runtime
+                existing.suspended_permission = None
+                acp_session_id = await runtime.load_session(
+                    existing_session_id,
+                    existing.cwd,
+                )
+                existing.acp_session_id = acp_session_id
+                if keep_session:
+                    await self._store.save(existing)
+                    return existing, False
+                return existing, True
+
             acp_session_id = await runtime.load_session(
                 existing_session_id,
                 cwd,
             )
         else:
             acp_session_id = await runtime.new_session(cwd)
+
         session = ACPConversationSession(
             chat_id=chat_id,
             harness=harness,
             acp_session_id=acp_session_id,
             cwd=cwd,
-            keep_session=False,
+            keep_session=keep_session,
             capabilities=runtime.capabilities,
             runtime=runtime,
         )
+        if keep_session:
+            await self._store.save(session)
+            return session, False
         return session, True
 
     def _get_harness_config(self, harness: str) -> ACPHarnessConfig:

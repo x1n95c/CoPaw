@@ -106,7 +106,8 @@ class ACPConfig(BaseModel):
             ACP tasks (for unverified harnesses).
         show_tool_calls: Whether to show ACP external-agent tool call messages
             in chat output.
-        save_dir: Directory to save ACP session states for persistence.
+        save_dir: Compatibility field for ACP session storage location.
+            Current session storage remains in-memory only.
         harnesses: Available ACP harness configurations.
     """
 
@@ -129,7 +130,10 @@ class ACPConfig(BaseModel):
     )
     save_dir: str = Field(
         default="~/.copaw/acp_sessions",
-        description="Directory to save ACP session states",
+        description=(
+            "Compatibility field for ACP session storage path; "
+            "current implementation keeps sessions in memory only"
+        ),
     )
     harnesses: Dict[str, ACPHarnessConfig] = Field(
         default_factory=_default_harnesses,

@@ -16,17 +16,11 @@ The flow:
 from __future__ import annotations
 
 import logging
-import uuid
 from dataclasses import dataclass
 from typing import Any, Optional
 
 from ...security.tool_guard import ToolGuardEngine, get_guard_engine
-from ...security.tool_guard.models import (
-    GuardFinding,
-    GuardSeverity,
-    GuardThreatCategory,
-    ToolGuardResult,
-)
+from ...security.tool_guard.models import GuardSeverity, ToolGuardResult
 
 logger = logging.getLogger(__name__)
 
@@ -276,46 +270,6 @@ class ACPToolGuardAdapter:
             "chown",
         ]
         return any(p in input_str for p in dangerous_patterns)
-
-    def build_guard_finding_for_permission(
-        self,
-        decision: ACPToolGuardDecision,
-        harness: str,
-        tool_name: str,
-    ) -> Optional[GuardFinding]:
-        """Build a GuardFinding for permission request display.
-
-        This creates a finding that can be shown to the user when
-        requesting approval for a tool call with guard warnings.
-        """
-        if decision.guard_result is None or not decision.guard_result.findings:
-            return None
-
-        # Combine findings into a summary
-        severities = [f.severity.value for f in decision.guard_result.findings]
-        categories = [f.category.value for f in decision.guard_result.findings]
-
-        return GuardFinding(
-            id=f"ACP-GUARD-{uuid.uuid4().hex}",
-            rule_id="acp_tool_guard_check",
-            category=GuardThreatCategory.CODE_EXECUTION,
-            severity=decision.guard_result.max_severity,
-            title=f"ACP Tool Guard: {tool_name} from {harness}",
-            description=(
-                f"External agent '{harness}' tool '{tool_name}' triggered "
-                f"{len(decision.guard_result.findings)} security findings: "
-                f"severities={severities}, categories={categories}"
-            ),
-            tool_name=tool_name,
-            param_name="tool_input",
-            matched_value=str(decision.guard_result.params)[:200],
-            guardian="acp_tool_guard_adapter",
-            metadata={
-                "harness": harness,
-                "guard_result": decision.guard_result.to_dict(),
-            },
-        )
-
 
 # Global adapter instance
 _acp_tool_guard_adapter: ACPToolGuardAdapter | None = None

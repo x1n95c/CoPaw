@@ -58,30 +58,6 @@ class ACPProtocolError(ACPErrors):
     pass
 
 
-class ACPPermissionError(ACPErrors):
-    """Raised when ACP permission request is denied.
-
-    Common causes:
-    - User denied the permission request
-    - Permission request timed out
-    - Dangerous operation blocked by policy
-    """
-
-    pass
-
-
-class ACPTimeoutError(ACPErrors):
-    """Raised when an ACP operation times out.
-
-    Common causes:
-    - Harness took too long to respond
-    - Session operation timed out
-    - Prompt execution exceeded timeout
-    """
-
-    pass
-
-
 class ACPSessionError(ACPErrors):
     """Raised when session operations fail.
 

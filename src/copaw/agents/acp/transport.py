@@ -10,6 +10,7 @@ import asyncio
 import json
 import logging
 import os
+from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -116,7 +117,9 @@ class ACPTransport:
         self._incoming: asyncio.Queue[
             JSONRPCRequest | JSONRPCNotification
         ] = asyncio.Queue()
-        self._stderr_buffer: list[str] = []
+        self._stderr_buffer: deque[str] = deque(
+            maxlen=self._MAX_STDERR_BUFFER_LINES,
+        )
 
     @property
     def incoming(self) -> asyncio.Queue[JSONRPCRequest | JSONRPCNotification]:
@@ -185,53 +188,9 @@ class ACPTransport:
 
     async def close(self) -> None:
         """Stop reader tasks and terminate the harness process."""
-        for task in (self._stdout_task, self._stderr_task):
-            if task is not None and not task.done():
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
-
-        for future in list(self._pending.values()):
-            if not future.done():
-                future.cancel()
-        self._pending.clear()
-
-        if self._process is not None:
-            if self._process.stdin is not None:
-                try:
-                    self._process.stdin.close()
-                    wait_closed = getattr(
-                        self._process.stdin,
-                        "wait_closed",
-                        None,
-                    )
-                    if callable(wait_closed):
-                        await wait_closed()
-                except Exception as exc:
-                    logger.debug(
-                        "Failed closing stdin for ACP harness %s: %s",
-                        self.harness_name,
-                        exc,
-                    )
-            try:
-                self._process.terminate()
-                await asyncio.wait_for(self._process.wait(), timeout=5.0)
-            except ProcessLookupError:
-                logger.debug(
-                    "ACP harness %s already exited before terminate",
-                    self.harness_name,
-                )
-            except asyncio.TimeoutError:
-                try:
-                    self._process.kill()
-                    await self._process.wait()
-                except ProcessLookupError:
-                    logger.debug(
-                        "ACP harness %s already exited before kill",
-                        self.harness_name,
-                    )
+        await self._cancel_reader_tasks()
+        self._cancel_pending_requests()
+        await self._shutdown_process()
 
         self._process = None
         self._stdout_task = None
@@ -262,12 +221,11 @@ class ACPTransport:
             ACPTransportError: If the request times out or transport fails.
         """
         request_id = self._next_request_id()
-        payload = {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "method": method,
-            "params": params,
-        }
+        payload = self._build_request_payload(
+            request_id=request_id,
+            method=method,
+            params=params,
+        )
         future: asyncio.Future[
             JSONRPCResponse
         ] = asyncio.get_running_loop().create_future()
@@ -297,11 +255,7 @@ class ACPTransport:
             params: Notification parameters.
         """
         await self._write_payload(
-            {
-                "jsonrpc": "2.0",
-                "method": method,
-                "params": params,
-            },
+            self._build_notification_payload(method=method, params=params),
         )
 
     async def send_result(self, request_id: str | int, result: Any) -> None:
@@ -312,11 +266,7 @@ class ACPTransport:
             result: The result to send.
         """
         await self._write_payload(
-            {
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "result": result,
-            },
+            self._build_result_payload(request_id=request_id, result=result),
         )
 
     async def send_error(
@@ -334,14 +284,11 @@ class ACPTransport:
             message: Error message.
         """
         await self._write_payload(
-            {
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "error": {
-                    "code": code,
-                    "message": message,
-                },
-            },
+            self._build_error_payload(
+                request_id=request_id,
+                code=code,
+                message=message,
+            ),
         )
 
     async def terminate_with_error(self, message: str) -> None:
@@ -374,6 +321,113 @@ class ACPTransport:
             )
         self._process.stdin.write(data)
         await self._process.stdin.drain()
+
+    def _build_request_payload(
+        self,
+        *,
+        request_id: str | int,
+        method: str,
+        params: dict[str, Any],
+    ) -> dict[str, Any]:
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "method": method,
+            "params": params,
+        }
+
+    def _build_notification_payload(
+        self,
+        *,
+        method: str,
+        params: dict[str, Any],
+    ) -> dict[str, Any]:
+        return {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+        }
+
+    def _build_result_payload(
+        self,
+        *,
+        request_id: str | int,
+        result: Any,
+    ) -> dict[str, Any]:
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "result": result,
+        }
+
+    def _build_error_payload(
+        self,
+        *,
+        request_id: str | int,
+        code: int,
+        message: str,
+    ) -> dict[str, Any]:
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "error": {
+                "code": code,
+                "message": message,
+            },
+        }
+
+    async def _cancel_reader_tasks(self) -> None:
+        for task in (self._stdout_task, self._stderr_task):
+            if task is not None and not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+
+    def _cancel_pending_requests(self) -> None:
+        for future in list(self._pending.values()):
+            if not future.done():
+                future.cancel()
+        self._pending.clear()
+
+    async def _shutdown_process(self) -> None:
+        if self._process is None:
+            return
+
+        if self._process.stdin is not None:
+            try:
+                self._process.stdin.close()
+                wait_closed = getattr(
+                    self._process.stdin,
+                    "wait_closed",
+                    None,
+                )
+                if callable(wait_closed):
+                    await wait_closed()
+            except Exception as exc:
+                logger.debug(
+                    "Failed closing stdin for ACP harness %s: %s",
+                    self.harness_name,
+                    exc,
+                )
+        try:
+            self._process.terminate()
+            await asyncio.wait_for(self._process.wait(), timeout=5.0)
+        except ProcessLookupError:
+            logger.debug(
+                "ACP harness %s already exited before terminate",
+                self.harness_name,
+            )
+        except asyncio.TimeoutError:
+            try:
+                self._process.kill()
+                await self._process.wait()
+            except ProcessLookupError:
+                logger.debug(
+                    "ACP harness %s already exited before kill",
+                    self.harness_name,
+                )
 
     def _on_reader_task_done(
         self,
@@ -435,40 +489,8 @@ class ACPTransport:
                 )
                 continue
 
-            if isinstance(message, JSONRPCResponse):
-                logger.debug(
-                    "ACP response received for %s: id=%s result=%s error=%s",
-                    self.harness_name,
-                    message.id,
-                    type(message.result).__name__ if message.result else None,
-                    message.error,
-                )
-                pending = self._pending.get(str(message.id))
-                if pending is not None and not pending.done():
-                    pending.set_result(message)
+            if await self._handle_decoded_message(message):
                 continue
-
-            if isinstance(message, JSONRPCRequest):
-                logger.info(
-                    "ACP request from harness %s: id=%s method=%s",
-                    self.harness_name,
-                    message.id,
-                    message.method,
-                )
-                if message.method.startswith("fs/"):
-                    logger.debug(
-                        "ACP fs request from %s: id=%s method=%s params=%s",
-                        self.harness_name,
-                        message.id,
-                        message.method,
-                        json.dumps(message.params, ensure_ascii=False)[:500],
-                    )
-            elif isinstance(message, JSONRPCNotification):
-                logger.debug(
-                    "ACP notification from harness %s: method=%s",
-                    self.harness_name,
-                    message.method,
-                )
 
             await self._incoming.put(message)
 
@@ -487,13 +509,52 @@ class ACPTransport:
                 continue
 
             self._stderr_buffer.append(text)
-            if len(self._stderr_buffer) > self._MAX_STDERR_BUFFER_LINES:
-                self._stderr_buffer.pop(0)
             logger.debug(
                 "ACP harness stderr (%s): %s",
                 self.harness_name,
                 text,
             )
+
+    async def _handle_decoded_message(
+        self,
+        message: JSONRPCResponse | JSONRPCRequest | JSONRPCNotification,
+    ) -> bool:
+        if isinstance(message, JSONRPCResponse):
+            logger.debug(
+                "ACP response received for %s: id=%s result=%s error=%s",
+                self.harness_name,
+                message.id,
+                type(message.result).__name__ if message.result else None,
+                message.error,
+            )
+            pending = self._pending.get(str(message.id))
+            if pending is not None and not pending.done():
+                pending.set_result(message)
+            return True
+
+        if isinstance(message, JSONRPCRequest):
+            logger.info(
+                "ACP request from harness %s: id=%s method=%s",
+                self.harness_name,
+                message.id,
+                message.method,
+            )
+            if message.method.startswith("fs/"):
+                logger.debug(
+                    "ACP fs request from %s: id=%s method=%s params=%s",
+                    self.harness_name,
+                    message.id,
+                    message.method,
+                    json.dumps(message.params, ensure_ascii=False)[:500],
+                )
+        elif isinstance(message, JSONRPCNotification):
+            logger.debug(
+                "ACP notification from harness %s: method=%s",
+                self.harness_name,
+                message.method,
+            )
+
+        return False
 
     def _decode_message(
         self,

@@ -25,7 +25,7 @@ from ...security.tool_guard.models import (
 )
 
 from .errors import ACPPermissionSuspendedError
-from .tool_guard_adapter import get_acp_tool_guard_adapter, ACPToolGuardDecision
+from .tool_guard_adapter import get_acp_tool_guard_adapter
 
 logger = logging.getLogger(__name__)
 
@@ -55,44 +55,12 @@ class ACPPermissionDecision:
     Attributes:
         approved: Whether the permission was approved.
         result: The result payload to send back to the harness.
-        pending_request_id: ID of the pending approval request.
         summary: Human-readable summary of the decision.
     """
 
     approved: bool
     result: dict[str, Any]
-    pending_request_id: str | None = None
     summary: dict[str, Any] | str = ""
-
-
-@dataclass
-class ACPApprovalSummary:
-    """Structured approval summary for i18n rendering on frontend.
-
-    Contains all data needed for the frontend to construct localized
-    approval messages, avoiding hardcoded text in the backend.
-
-    Attributes:
-        harness: The harness name.
-        tool_name: The tool being called.
-        tool_kind: The kind of tool operation.
-        target: The target of the operation (path, command, etc.).
-    """
-
-    harness: str
-    tool_name: str
-    tool_kind: str
-    target: str | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
-        return {
-            "type": "acp_approval_summary",
-            "harness": self.harness,
-            "tool_name": self.tool_name,
-            "tool_kind": self.tool_kind,
-            "target": self.target,
-        }
 
 
 def is_read_only_tool(tool_name: str | None, tool_kind: str | None) -> bool:
@@ -429,13 +397,13 @@ class ACPPermissionAdapter:
 
         harness = tool_call.get("harness") or "external-agent"
 
-        summary = ACPApprovalSummary(
-            harness=str(harness),
-            tool_name=tool_name,
-            tool_kind=tool_kind or "unknown",
-            target=target_text or None,
-        )
-        return summary.to_dict()
+        return {
+            "type": "acp_approval_summary",
+            "harness": str(harness),
+            "tool_name": tool_name,
+            "tool_kind": tool_kind or "unknown",
+            "target": target_text or None,
+        }
 
     def _build_tool_guard_result(
         self,
