@@ -148,7 +148,10 @@ def _touch_activity(state: dict) -> None:
 def _is_browser_running(state: dict) -> bool:
     """Check if browser is currently running (sync or async mode)."""
     if _USE_SYNC_PLAYWRIGHT:
-        return state.get("_sync_context") is not None or state.get("_sync_browser") is not None
+        return (
+            state.get("_sync_context") is not None
+            or state.get("_sync_browser") is not None
+        )
     return state.get("browser") is not None or state.get("context") is not None
 
 
@@ -408,7 +411,7 @@ def _wait_for_cdp_ready(port: int, timeout: float = 15.0) -> dict[str, Any]:
             last_error = exc
             time.sleep(0.2)
     raise RuntimeError(
-        f"Timed out waiting for Chrome CDP endpoint on port {port}: {last_error}"
+        f"Timed out waiting for Chrome CDP endpoint on port {port}: {last_error}",
     )
 
 
@@ -655,15 +658,16 @@ async def _ensure_browser(
             state["browser_pid"] = None
             state["browser_process"] = None
             state["launch_mode"] = "playwright"
-        elif True:
             default_kind, exe = _resolve_chromium_launch_target()
             if not exe:
                 if default_kind == "webkit" or sys.platform == "darwin":
                     raise RuntimeError(
-                        "Managed CDP mode requires Chrome/Chromium/Edge. Safari/WebKit is not supported."
+                        "Managed CDP mode requires "
+                        "Chrome/Chromium/Edge. Safari/WebKit "
+                        "is not supported.",
                     )
                 raise RuntimeError(
-                    "Managed CDP mode requires a Chrome/Chromium executable, but none was found."
+                    "Managed CDP mode requires a Chrome/Chromium executable, but none was found.",
                 )
             chosen_cdp_port = _find_free_local_port()
             proc = _start_managed_chromium_process(
@@ -677,10 +681,12 @@ async def _ensure_browser(
                 async_playwright = _ensure_playwright_async()
                 pw = await async_playwright().start()
                 browser = await pw.chromium.connect_over_cdp(
-                    f"http://127.0.0.1:{chosen_cdp_port}"
+                    f"http://127.0.0.1:{chosen_cdp_port}",
                 )
                 contexts = browser.contexts
-                context = contexts[0] if contexts else await browser.new_context()
+                context = (
+                    contexts[0] if contexts else await browser.new_context()
+                )
                 _attach_context_listeners(state, context)
                 state["playwright"] = pw
                 state["browser"] = browser
@@ -878,10 +884,13 @@ async def _action_start(
             if not exe:
                 if default_kind == "webkit" or sys.platform == "darwin":
                     raise RuntimeError(
-                        "Managed CDP mode requires Chrome/Chromium/Edge. Safari/WebKit is not supported."
+                        "Managed CDP mode requires "
+                        "Chrome/Chromium/Edge. Safari/WebKit "
+                        "is not supported.",
                     )
                 raise RuntimeError(
-                    "Managed CDP mode requires a Chrome/Chromium executable, but none was found."
+                    "Managed CDP mode requires a Chrome/Chromium executable, "
+                    "but none was found.",
                 )
             chosen_cdp_port = cdp_port or _find_free_local_port()
             proc = _start_managed_chromium_process(
@@ -895,10 +904,12 @@ async def _action_start(
                 async_playwright = _ensure_playwright_async()
                 pw = await async_playwright().start()
                 browser = await pw.chromium.connect_over_cdp(
-                    f"http://127.0.0.1:{chosen_cdp_port}"
+                    f"http://127.0.0.1:{chosen_cdp_port}",
                 )
                 contexts = browser.contexts
-                context = contexts[0] if contexts else await browser.new_context()
+                context = (
+                    contexts[0] if contexts else await browser.new_context()
+                )
                 _attach_context_listeners(state, context)
                 state["playwright"] = pw
                 state["browser"] = browser
@@ -1022,10 +1033,14 @@ async def _action_start(
         }
         if state.get("browser_pid"):
             result["browser_pid"] = state["browser_pid"]
-        cdp_url = state.get("cdp_url") or (f"http://localhost:{cdp_port}" if cdp_port else None)
+        cdp_url = state.get("cdp_url") or (
+            f"http://localhost:{cdp_port}" if cdp_port else None
+        )
         if cdp_url:
             result["cdp_url"] = cdp_url
-            result["message"] = msg + f" with CDP port {cdp_url.rsplit(':', 1)[-1]}"
+            result["message"] = (
+                msg + f" with CDP port {cdp_url.rsplit(':', 1)[-1]}"
+            )
         return _tool_response(
             json.dumps(result, ensure_ascii=False, indent=2),
         )
@@ -3048,10 +3063,8 @@ _CDP_SCAN_PORT_MAX = 10000
 
 def _fetch_cdp_json(port: int) -> list:
     """Fetch CDP /json endpoint synchronously. Raises on failure."""
-    import urllib.request
-
     url = f"http://localhost:{port}/json"
-    with urllib.request.urlopen(url, timeout=1) as resp:  # noqa: S310
+    with urllib_request.urlopen(url, timeout=1) as resp:  # noqa: S310
         return json.loads(resp.read())
 
 
