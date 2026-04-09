@@ -16,6 +16,7 @@ import json
 import logging
 from pathlib import Path
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -391,15 +392,16 @@ def _resolve_chromium_launch_target() -> tuple[Optional[str], Optional[str]]:
 
 
 def _find_free_local_port() -> int:
-    import socket
-
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
         sock.listen(1)
         return int(sock.getsockname()[1])
 
 
-def _wait_for_cdp_ready(port: int, timeout: float = 15.0) -> dict[str, Any]:
+async def _wait_for_cdp_ready(
+    port: int,
+    timeout: float = 15.0,
+) -> dict[str, Any]:
     deadline = time.monotonic() + timeout
     last_error: Optional[Exception] = None
     url = f"http://127.0.0.1:{port}/json/version"
@@ -409,10 +411,75 @@ def _wait_for_cdp_ready(port: int, timeout: float = 15.0) -> dict[str, Any]:
                 return json.loads(resp.read().decode("utf-8"))
         except Exception as exc:
             last_error = exc
-            time.sleep(0.2)
+            await asyncio.sleep(0.2)
     raise RuntimeError(
         f"Timed out waiting for Chrome CDP endpoint on port {port}: {last_error}",
     )
+
+
+async def _start_managed_cdp_browser(
+    state: dict,
+    cdp_port: int = 0,
+    ensure_pages: bool = False,
+) -> None:
+    default_kind, exe = _resolve_chromium_launch_target()
+    if not exe:
+        if default_kind == "webkit" or sys.platform == "darwin":
+            raise RuntimeError(
+                "Managed CDP mode requires "
+                "Chrome/Chromium/Edge. Safari/WebKit "
+                "is not supported.",
+            )
+        raise RuntimeError(
+            "Managed CDP mode requires a Chrome/Chromium executable, "
+            "but none was found.",
+        )
+
+    chosen_cdp_port = cdp_port or _find_free_local_port()
+    proc = _start_managed_chromium_process(
+        executable_path=exe,
+        user_data_dir=state["user_data_dir"],
+        headless=state["headless"],
+        cdp_port=chosen_cdp_port,
+    )
+    try:
+        await _wait_for_cdp_ready(chosen_cdp_port)
+        async_playwright = _ensure_playwright_async()
+        pw = await async_playwright().start()
+        browser = await pw.chromium.connect_over_cdp(
+            f"http://127.0.0.1:{chosen_cdp_port}",
+        )
+        contexts = browser.contexts
+        context = contexts[0] if contexts else await browser.new_context()
+        _attach_context_listeners(state, context)
+        state["playwright"] = pw
+        state["browser"] = browser
+        state["context"] = context
+        state["connected_via_cdp"] = True
+        state["cdp_url"] = f"http://127.0.0.1:{chosen_cdp_port}"
+        state["launch_mode"] = "managed_cdp"
+        state["owned_browser_process"] = True
+        state["browser_pid"] = proc.pid
+        state["browser_process"] = proc
+        if ensure_pages:
+            for page in context.pages:
+                page_id = _next_page_id(state)
+                _register_page(state, page, page_id)
+                if state["current_page_id"] is None:
+                    state["current_page_id"] = page_id
+            if not state["pages"]:
+                page = await context.new_page()
+                page_id = _next_page_id(state)
+                _register_page(state, page, page_id)
+                state["current_page_id"] = page_id
+    except Exception:
+        try:
+            if proc.poll() is None:
+                proc.kill()
+                await asyncio.to_thread(proc.wait, 5)
+        except Exception:
+            pass
+        raise
 
 
 def _start_managed_chromium_process(
@@ -587,19 +654,24 @@ def _next_page_id(state: dict) -> str:
     return f"page_{state['page_counter']}"
 
 
+def _register_page(state: dict, page, page_id: str) -> None:
+    """Initialize state and listeners for a page."""
+    state["refs"][page_id] = {}
+    state["console_logs"][page_id] = []
+    state["network_requests"][page_id] = []
+    state["pending_dialogs"][page_id] = []
+    state["pending_file_choosers"][page_id] = []
+    _attach_page_listeners(state, page, page_id)
+    state["pages"][page_id] = page
+
+
 def _attach_context_listeners(state: dict, context) -> None:
     """When the page opens a new tab (e.g. target=_blank, window.open),
     register it and set as current."""
 
     def on_page(page):
         new_id = _next_page_id(state)
-        state["refs"][new_id] = {}
-        state["console_logs"][new_id] = []
-        state["network_requests"][new_id] = []
-        state["pending_dialogs"][new_id] = []
-        state["pending_file_choosers"][new_id] = []
-        _attach_page_listeners(state, page, new_id)
-        state["pages"][new_id] = page
+        _register_page(state, page, new_id)
         state["current_page_id"] = new_id
         logger.debug(
             "New tab opened by page, registered as page_id=%s",
@@ -658,120 +730,11 @@ async def _ensure_browser(
             state["browser_pid"] = None
             state["browser_process"] = None
             state["launch_mode"] = "playwright"
-            default_kind, exe = _resolve_chromium_launch_target()
-            if not exe:
-                if default_kind == "webkit" or sys.platform == "darwin":
-                    raise RuntimeError(
-                        "Managed CDP mode requires "
-                        "Chrome/Chromium/Edge. Safari/WebKit "
-                        "is not supported.",
-                    )
-                raise RuntimeError(
-                    "Managed CDP mode requires a Chrome/Chromium executable, but none was found.",
-                )
-            chosen_cdp_port = _find_free_local_port()
-            proc = _start_managed_chromium_process(
-                executable_path=exe,
-                user_data_dir=state["user_data_dir"],
-                headless=state["headless"],
-                cdp_port=chosen_cdp_port,
-            )
-            try:
-                _wait_for_cdp_ready(chosen_cdp_port)
-                async_playwright = _ensure_playwright_async()
-                pw = await async_playwright().start()
-                browser = await pw.chromium.connect_over_cdp(
-                    f"http://127.0.0.1:{chosen_cdp_port}",
-                )
-                contexts = browser.contexts
-                context = (
-                    contexts[0] if contexts else await browser.new_context()
-                )
-                _attach_context_listeners(state, context)
-                state["playwright"] = pw
-                state["browser"] = browser
-                state["context"] = context
-                state["connected_via_cdp"] = True
-                state["cdp_url"] = f"http://127.0.0.1:{chosen_cdp_port}"
-                state["launch_mode"] = "managed_cdp"
-                state["owned_browser_process"] = True
-                state["browser_pid"] = proc.pid
-                state["browser_process"] = proc
-            except Exception:
-                try:
-                    if proc.poll() is None:
-                        proc.kill()
-                        await asyncio.to_thread(proc.wait, 5)
-                except Exception:
-                    pass
-                raise
         else:
-            # Standard mode: use async Playwright
-            async_playwright = _ensure_playwright_async()
-            pw = await async_playwright().start()
-            # Prefer OS default browser when available (e.g. user's default Chrome/Safari).
-            default_kind, exe = _resolve_chromium_launch_target()
-            if exe:
-                # System Chrome/Edge/Chromium: use persistent context when workspace
-                # dir is available, otherwise fall back to a plain new_context.
-                user_data_dir = state["user_data_dir"]
-                if user_data_dir:
-                    Path(user_data_dir).mkdir(parents=True, exist_ok=True)
-                    extra_args = _chromium_launch_args()
-                    context = await pw.chromium.launch_persistent_context(
-                        user_data_dir=user_data_dir,
-                        headless=state["headless"],
-                        executable_path=exe,
-                        args=extra_args if extra_args else [],
-                    )
-                    _attach_context_listeners(state, context)
-                    state["playwright"] = pw
-                    state[
-                        "browser"
-                    ] = None  # not needed for persistent context
-                    state["context"] = context
-                else:
-                    launch_kwargs: dict[str, Any] = {
-                        "headless": state["headless"],
-                    }
-                    extra_args = _chromium_launch_args()
-                    if extra_args:
-                        launch_kwargs["args"] = extra_args
-                    launch_kwargs["executable_path"] = exe
-                    pw_browser = await pw.chromium.launch(**launch_kwargs)
-                    context = await pw_browser.new_context()
-                    _attach_context_listeners(state, context)
-                    state["playwright"] = pw
-                    state["browser"] = pw_browser
-                    state["context"] = context
-            elif default_kind == "webkit" or sys.platform == "darwin":
-                # macOS: default Safari or no Chromium → use WebKit (no persistent ctx)
-                pw_browser = await pw.webkit.launch(
-                    headless=state["headless"],
-                )
-                context = await pw_browser.new_context()
-                _attach_context_listeners(state, context)
-                state["playwright"] = pw
-                state["browser"] = pw_browser
-                state["context"] = context
-            else:
-                # Windows/Linux without system Chromium → Playwright's bundled Chromium
-                launch_kwargs = {"headless": state["headless"]}
-                extra_args = _chromium_launch_args()
-                if extra_args:
-                    launch_kwargs["args"] = extra_args
-                pw_browser = await pw.chromium.launch(**launch_kwargs)
-                context = await pw_browser.new_context()
-                _attach_context_listeners(state, context)
-                state["playwright"] = pw
-                state["browser"] = pw_browser
-                state["context"] = context
-            state["connected_via_cdp"] = False
-            state["cdp_url"] = None
-            state["owned_browser_process"] = False
-            state["browser_pid"] = None
-            state["browser_process"] = None
-            state["launch_mode"] = "playwright"
+            await _start_managed_cdp_browser(
+                state,
+                ensure_pages=True,
+            )
         state["_last_browser_error"] = None
         _touch_activity(state)
         _start_idle_watchdog(state)
@@ -859,9 +822,7 @@ async def _action_start(
     state["headless"] = not headed
 
     if cdp_port:
-        import socket as _socket
-
-        with _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM) as _s:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as _s:
             if _s.connect_ex(("127.0.0.1", cdp_port)) == 0:
                 return _tool_response(
                     json.dumps(
@@ -880,64 +841,11 @@ async def _action_start(
 
     try:
         if not _USE_SYNC_PLAYWRIGHT and not bool(private_mode):
-            default_kind, exe = _resolve_chromium_launch_target()
-            if not exe:
-                if default_kind == "webkit" or sys.platform == "darwin":
-                    raise RuntimeError(
-                        "Managed CDP mode requires "
-                        "Chrome/Chromium/Edge. Safari/WebKit "
-                        "is not supported.",
-                    )
-                raise RuntimeError(
-                    "Managed CDP mode requires a Chrome/Chromium executable, "
-                    "but none was found.",
-                )
-            chosen_cdp_port = cdp_port or _find_free_local_port()
-            proc = _start_managed_chromium_process(
-                executable_path=exe,
-                user_data_dir=state["user_data_dir"],
-                headless=state["headless"],
-                cdp_port=chosen_cdp_port,
+            await _start_managed_cdp_browser(
+                state,
+                cdp_port=cdp_port,
+                ensure_pages=True,
             )
-            try:
-                _wait_for_cdp_ready(chosen_cdp_port)
-                async_playwright = _ensure_playwright_async()
-                pw = await async_playwright().start()
-                browser = await pw.chromium.connect_over_cdp(
-                    f"http://127.0.0.1:{chosen_cdp_port}",
-                )
-                contexts = browser.contexts
-                context = (
-                    contexts[0] if contexts else await browser.new_context()
-                )
-                _attach_context_listeners(state, context)
-                state["playwright"] = pw
-                state["browser"] = browser
-                state["context"] = context
-                state["connected_via_cdp"] = True
-                state["cdp_url"] = f"http://127.0.0.1:{chosen_cdp_port}"
-                state["launch_mode"] = "managed_cdp"
-                state["owned_browser_process"] = True
-                state["browser_pid"] = proc.pid
-                state["browser_process"] = proc
-                for page in context.pages:
-                    page_id = _next_page_id(state)
-                    state["pages"][page_id] = page
-                    if state["current_page_id"] is None:
-                        state["current_page_id"] = page_id
-                if not state["pages"]:
-                    page = await context.new_page()
-                    page_id = _next_page_id(state)
-                    state["pages"][page_id] = page
-                    state["current_page_id"] = page_id
-            except Exception:
-                try:
-                    if proc.poll() is None:
-                        proc.kill()
-                        await asyncio.to_thread(proc.wait, 5)
-                except Exception:
-                    pass
-                raise
         elif _USE_SYNC_PLAYWRIGHT:
             loop = asyncio.get_event_loop()
             pw, browser, context = await loop.run_in_executor(
@@ -1204,12 +1112,7 @@ async def _action_open(state: dict, url: str, page_id: str) -> ToolResponse:
             # Standard async mode
             page = await state["context"].new_page()
 
-        state["refs"][page_id] = {}
-        state["console_logs"][page_id] = []
-        state["network_requests"][page_id] = []
-        state["pending_dialogs"][page_id] = []
-        state["pending_file_choosers"][page_id] = []
-        _attach_page_listeners(state, page, page_id)
+        _register_page(state, page, page_id)
 
         if _USE_SYNC_PLAYWRIGHT:
             loop = asyncio.get_event_loop()
@@ -2829,12 +2732,7 @@ async def _action_tabs(  # pylint: disable=too-many-return-statements
             else:
                 page = await state["context"].new_page()
             new_id = _next_page_id(state)
-            state["refs"][new_id] = {}
-            state["console_logs"][new_id] = []
-            state["network_requests"][new_id] = []
-            state["pending_dialogs"][new_id] = []
-            _attach_page_listeners(state, page, new_id)
-            state["pages"][new_id] = page
+            _register_page(state, page, new_id)
             state["current_page_id"] = new_id
             return _tool_response(
                 json.dumps(
@@ -3188,16 +3086,14 @@ async def _action_connect_cdp(state: dict, cdp_url: str) -> ToolResponse:
         state["browser_process"] = None
         # Register existing pages
         for page in context.pages:
-            page_id = f"page_{state['page_counter']}"
-            state["page_counter"] += 1
-            state["pages"][page_id] = page
+            page_id = _next_page_id(state)
+            _register_page(state, page, page_id)
             if state["current_page_id"] is None:
                 state["current_page_id"] = page_id
         if not state["pages"]:
             page = await context.new_page()
-            page_id = f"page_{state['page_counter']}"
-            state["page_counter"] += 1
-            state["pages"][page_id] = page
+            page_id = _next_page_id(state)
+            _register_page(state, page, page_id)
             state["current_page_id"] = page_id
         _touch_activity(state)
         _start_idle_watchdog(state)
