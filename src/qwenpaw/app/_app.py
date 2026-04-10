@@ -45,7 +45,7 @@ from .channels.registry import register_custom_channel_routes
 
 # Apply log level on load so reload child process gets same level as CLI.
 logger = setup_logger(os.environ.get(LOG_LEVEL_ENV, "info"))
-
+LOG_NAMESPACE = PROJECT_NAME.lower()
 
 # Ensure static assets are served with browser-compatible MIME types across
 # platforms (notably Windows may miss .js/.mjs mappings).
@@ -168,7 +168,7 @@ async def lifespan(
     app: FastAPI,
 ):  # pylint: disable=too-many-statements,too-many-branches
     startup_start_time = time.time()
-    add_project_file_handler(WORKING_DIR / f"{PROJECT_NAME.lower()}.log")
+    add_project_file_handler(WORKING_DIR / f"{LOG_NAMESPACE}.log")
 
     # Auto-register admin from env vars (for automated deployments)
     from .auth import auto_register_from_env

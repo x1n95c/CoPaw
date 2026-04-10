@@ -44,6 +44,8 @@ DAEMON_SHORT_ALIASES = {
     "approve": "approve",
 }
 
+LOG_NAMESPACE = PROJECT_NAME.lower()
+LOG_PATH =  WORKING_DIR / f"{LOG_NAMESPACE}.log"
 
 @dataclass
 class DaemonContext:
@@ -145,7 +147,7 @@ async def run_daemon_restart(context: DaemonContext) -> str:
     return (
         "**Restart**\n\n"
         "- Not running inside app. "
-        f"Run the app (e.g. `{PROJECT_NAME.lower()} app`) "
+        f"Run the app (e.g. `{LOG_NAMESPACE} app`) "
         "and use /daemon restart in chat, "
         "or restart the process with systemd/supervisor/docker."
     )
@@ -172,13 +174,13 @@ def run_daemon_version(context: DaemonContext) -> str:
         f"**Daemon version**\n\n"
         f"- Version: {ver}\n"
         f"- Working dir: {context.working_dir}\n"
-        f"- Log file: {WORKING_DIR / f'{PROJECT_NAME.lower()}.log'}"
+        f"- Log file: {LOG_PATH}"
     )
 
 
 def run_daemon_logs(lines: int = 100) -> str:
     """Tail last N lines from the project log file."""
-    log_path = WORKING_DIR / f"{PROJECT_NAME.lower()}.log"
+    log_path = LOG_PATH
     content = _get_last_lines(log_path, lines=lines)
     return f"**Console log (last {lines} lines)**\n\n```\n{content}\n```"
 
