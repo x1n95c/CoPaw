@@ -25,6 +25,7 @@ from ..constant import (
     WORKING_DIR,
 )
 from ..providers.models import ModelSlotConfig
+from ..agents.acp.core import ACPAgentConfig, ACPConfig
 
 
 def generate_short_agent_id() -> str:
@@ -1001,6 +1002,12 @@ def _default_builtin_tools() -> Dict[str, BuiltinToolConfig]:
             description="Get llm token usage",
             icon="📊",
         ),
+        "spawn_agent": BuiltinToolConfig(
+            name="spawn_agent",
+            enabled=False,
+            description="Delegate work to an external ACP agent runner",
+            icon="🤖",
+        ),
     }
 
 
@@ -1139,6 +1146,7 @@ class Config(BaseModel):
     agents: AgentsConfig = Field(default_factory=AgentsConfig)
     last_dispatch: Optional[LastDispatchConfig] = None
     security: SecurityConfig = Field(default_factory=SecurityConfig)
+    acp: ACPConfig = Field(default_factory=ACPConfig)
     show_tool_details: bool = True
     user_timezone: str = Field(
         default_factory=detect_system_timezone,
