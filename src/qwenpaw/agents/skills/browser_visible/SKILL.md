@@ -2,7 +2,7 @@
 name: browser_visible
 description: "当用户需要控制 browser_use 的浏览器启动方式时，使用本 skill。当前 browser_use 默认使用 managed CDP 启动本地 Chrome/Chromium；`headed` 控制是否显示窗口，`private_mode` 控制是否禁用 CDP、改走 Playwright。"
 metadata:
-  builtin_skill_version: "1.4"
+  builtin_skill_version: "1.2"
   qwenpaw:
     emoji: "🖥️"
     requires: {}
