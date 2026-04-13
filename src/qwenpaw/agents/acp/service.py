@@ -7,7 +7,12 @@ import atexit
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
 
-from .core import ACPAgentConfig, ACPConfig, ACPConfigurationError, ACPSessionError
+from .core import (
+    ACPAgentConfig,
+    ACPConfig,
+    ACPConfigurationError,
+    ACPSessionError,
+)
 from .permissions import ACPPermissionAdapter
 from .runtime import ACPRuntime
 
@@ -88,11 +93,14 @@ class ACPService:
             raise ACPSessionError(f"Session not found: {acp_session_id}")
         if conversation.runtime.suspended_permission is None:
             raise ACPSessionError(
-                f"Session {acp_session_id} has no pending permission request"
+                f"Session {acp_session_id} has no pending permission request",
             )
 
         suspended = conversation.runtime.suspended_permission
-        permission_adapter, permission_handler = self._build_permission_handler(
+        (
+            permission_adapter,
+            permission_handler,
+        ) = self._build_permission_handler(
             agent=conversation.agent,
             cwd=conversation.cwd,
         )
@@ -104,10 +112,12 @@ class ACPService:
             raise ACPSessionError(f"Unknown option_id '{option_id}'")
         permission_result = permission_adapter.selected_result(selected_option)
 
-        result_payload = await conversation.runtime.resume_prompt_after_permission(
-            permission_result=permission_result,
-            on_message=on_message,
-            permission_handler=permission_handler,
+        result_payload = (
+            await conversation.runtime.resume_prompt_after_permission(
+                permission_result=permission_result,
+                on_message=on_message,
+                permission_handler=permission_handler,
+            )
         )
         return {
             "suspended_permission": conversation.runtime.suspended_permission,
@@ -133,11 +143,20 @@ class ACPService:
             except Exception:
                 pass
 
-    async def get_session(self, chat_id: str, agent: str) -> _Conversation | None:
+    async def get_session(
+        self,
+        chat_id: str,
+        agent: str,
+    ) -> _Conversation | None:
         async with self._lock:
             return self._sessions.get((chat_id, agent))
 
-    async def get_pending_permission(self, *, chat_id: str, agent: str) -> Any | None:
+    async def get_pending_permission(
+        self,
+        *,
+        chat_id: str,
+        agent: str,
+    ) -> Any | None:
         conversation = await self.get_session(chat_id, agent)
         if conversation is None:
             return None
@@ -171,14 +190,20 @@ class ACPService:
             )
         else:
             existing.runtime = runtime
-            existing.acp_session_id = await runtime.load_session(existing.acp_session_id, existing.cwd)
+            existing.acp_session_id = await runtime.load_session(
+                existing.acp_session_id,
+                existing.cwd,
+            )
             conversation = existing
 
         async with self._lock:
             self._sessions[(chat_id, agent)] = conversation
         return conversation
 
-    async def _find_session_by_acp_id(self, acp_session_id: str) -> _Conversation | None:
+    async def _find_session_by_acp_id(
+        self,
+        acp_session_id: str,
+    ) -> _Conversation | None:
         async with self._lock:
             for session in self._sessions.values():
                 if session.acp_session_id == acp_session_id:
@@ -188,9 +213,15 @@ class ACPService:
     def _get_agent_config(self, agent: str) -> ACPAgentConfig:
         agent_config = self.config.agents.get(agent)
         if agent_config is None:
-            raise ACPConfigurationError(f"Unknown ACP agent: {agent}", agent=agent)
+            raise ACPConfigurationError(
+                f"Unknown ACP agent: {agent}",
+                agent=agent,
+            )
         if not agent_config.enabled:
-            raise ACPConfigurationError(f"ACP agent '{agent}' is disabled", agent=agent)
+            raise ACPConfigurationError(
+                f"ACP agent '{agent}' is disabled",
+                agent=agent,
+            )
         return agent_config
 
 

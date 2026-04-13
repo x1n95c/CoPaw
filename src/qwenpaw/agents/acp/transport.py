@@ -48,7 +48,9 @@ class ACPTransport:
         self._stderr_task: asyncio.Task[None] | None = None
         self._request_id = 0
         self._pending: dict[str, asyncio.Future[JSONRPCResponse]] = {}
-        self._incoming: asyncio.Queue[JSONRPCRequest | JSONRPCNotification] = asyncio.Queue()
+        self._incoming: asyncio.Queue[
+            JSONRPCRequest | JSONRPCNotification
+        ] = asyncio.Queue()
         self._owns_process_group = False
 
     @property
@@ -105,7 +107,10 @@ class ACPTransport:
             await self._cancel_tasks(tasks)
         finally:
             self._cancel_pending_requests()
-            await self._shutdown_process(process, owns_process_group=owns_process_group)
+            await self._shutdown_process(
+                process,
+                owns_process_group=owns_process_group,
+            )
 
     async def send_request(
         self,
@@ -115,7 +120,9 @@ class ACPTransport:
         timeout: float = 60.0,
     ) -> JSONRPCResponse:
         request_id = self._next_request_id()
-        future: asyncio.Future[JSONRPCResponse] = asyncio.get_running_loop().create_future()
+        future: asyncio.Future[
+            JSONRPCResponse
+        ] = asyncio.get_running_loop().create_future()
         self._pending[request_id] = future
         try:
             await self._write_payload(
@@ -124,12 +131,16 @@ class ACPTransport:
                     "id": request_id,
                     "method": method,
                     "params": params,
-                }
+                },
             )
             return await asyncio.wait_for(future, timeout=timeout)
         except asyncio.TimeoutError as exc:
+            message = (
+                f"Timed out waiting for {method} response "
+                f"from {self.agent_name}"
+            )
             raise ACPTransportError(
-                f"Timed out waiting for {method} response from {self.agent_name}",
+                message,
                 agent=self.agent_name,
             ) from exc
         finally:
@@ -141,7 +152,7 @@ class ACPTransport:
                 "jsonrpc": "2.0",
                 "id": request_id,
                 "result": result,
-            }
+            },
         )
 
     async def send_error(
@@ -156,7 +167,7 @@ class ACPTransport:
                 "jsonrpc": "2.0",
                 "id": request_id,
                 "error": {"code": code, "message": message},
-            }
+            },
         )
 
     def _process_kwargs(self) -> dict[str, Any]:
@@ -171,11 +182,14 @@ class ACPTransport:
                 agent=self.agent_name,
             )
         self._process.stdin.write(
-            json.dumps(payload, ensure_ascii=False).encode("utf-8") + b"\n"
+            json.dumps(payload, ensure_ascii=False).encode("utf-8") + b"\n",
         )
         await self._process.stdin.drain()
 
-    async def _cancel_tasks(self, tasks: list[asyncio.Task[None] | None]) -> None:
+    async def _cancel_tasks(
+        self,
+        tasks: list[asyncio.Task[None] | None],
+    ) -> None:
         for task in tasks:
             if task is None or task.done():
                 continue
@@ -208,13 +222,19 @@ class ACPTransport:
 
         await self._close_stdin(process)
         try:
-            self._terminate_process(process, owns_process_group=owns_process_group)
+            self._terminate_process(
+                process,
+                owns_process_group=owns_process_group,
+            )
             await asyncio.wait_for(process.wait(), timeout=5.0)
         except ProcessLookupError:
             return
         except asyncio.TimeoutError:
             try:
-                self._kill_process(process, owns_process_group=owns_process_group)
+                self._kill_process(
+                    process,
+                    owns_process_group=owns_process_group,
+                )
                 await process.wait()
             except (ProcessLookupError, Exception):
                 pass
@@ -292,7 +312,9 @@ class ACPTransport:
     def _fail_pending(self, message: str) -> None:
         for future in list(self._pending.values()):
             if not future.done():
-                future.set_exception(ACPTransportError(message, agent=self.agent_name))
+                future.set_exception(
+                    ACPTransportError(message, agent=self.agent_name),
+                )
         self._pending.clear()
 
     def _next_request_id(self) -> str:

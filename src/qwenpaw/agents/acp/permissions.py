@@ -31,7 +31,9 @@ class ACPPermissionAdapter:
             options = []
 
         if self._is_hard_blocked(tool_call):
-            return PermissionResolution(result={"outcome": {"outcome": "cancelled"}})
+            return PermissionResolution(
+                result={"outcome": {"outcome": "cancelled"}},
+            )
 
         return PermissionResolution(
             suspended=SuspendedPermission(
@@ -47,7 +49,7 @@ class ACPPermissionAdapter:
                 command=self._command(tool_call),
                 paths=self._paths(tool_call),
                 requires_user_confirmation=True,
-            )
+            ),
         )
 
     def resolve_option_by_id(
@@ -115,7 +117,9 @@ class ACPPermissionAdapter:
                 return command.strip()
             argv = raw_input.get("args") or raw_input.get("argv")
             if isinstance(argv, list):
-                parts = [str(item).strip() for item in argv if str(item).strip()]
+                parts = [
+                    str(item).strip() for item in argv if str(item).strip()
+                ]
                 if parts:
                     return " ".join(parts)
         return None

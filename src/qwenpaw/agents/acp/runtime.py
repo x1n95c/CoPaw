@@ -16,7 +16,12 @@ from .core import (
     SuspendedPermission,
 )
 from .tool_parser import ACPToolCallParser
-from .transport import ACPTransport, JSONRPCNotification, JSONRPCRequest, JSONRPCResponse
+from .transport import (
+    ACPTransport,
+    JSONRPCNotification,
+    JSONRPCRequest,
+    JSONRPCResponse,
+)
 
 PermissionHandler = Callable[[dict[str, Any]], Awaitable[PermissionResolution]]
 MessageHandler = Callable[[dict[str, Any], bool], Awaitable[None]]
@@ -142,7 +147,7 @@ class ACPRuntime:
                 "session/prompt",
                 {"sessionId": session_id, "prompt": prompt_blocks},
                 timeout=timeout,
-            )
+            ),
         )
         return await self._drain_and_finalize_prompt(
             permission_handler=permission_handler,
@@ -157,12 +162,19 @@ class ACPRuntime:
         permission_handler: PermissionHandler,
     ) -> dict[str, Any] | None:
         if self._suspended_permission is None:
-            raise ACPErrors("No suspended permission to resume", agent=self.agent_name)
+            raise ACPErrors(
+                "No suspended permission to resume",
+                agent=self.agent_name,
+            )
         request_id = self._suspended_permission.request_id
         self._suspended_permission = None
         await self.transport.send_result(request_id, permission_result)
         await on_message(
-            {"type": "status", "status": "permission_resolved", "summary": "Permission resolved, resuming execution."},
+            {
+                "type": "status",
+                "status": "permission_resolved",
+                "summary": "Permission resolved, resuming execution.",
+            },
             True,
         )
         return await self._drain_and_finalize_prompt(
@@ -206,7 +218,11 @@ class ACPRuntime:
                 if prompt_task.done():
                     break
                 now = asyncio.get_running_loop().time()
-                if self.EMIT_THINKING_STATUS and now - last_status_at >= self.THINKING_STATUS_INTERVAL_SECONDS:
+                if (
+                    self.EMIT_THINKING_STATUS
+                    and now - last_status_at
+                    >= self.THINKING_STATUS_INTERVAL_SECONDS
+                ):
                     last_status_at = now
                     await on_message(
                         {
@@ -231,7 +247,10 @@ class ACPRuntime:
             await self._handle_notification(incoming, on_message)
         return False
 
-    async def _finalize_prompt(self, on_message: MessageHandler) -> dict[str, Any]:
+    async def _finalize_prompt(
+        self,
+        on_message: MessageHandler,
+    ) -> dict[str, Any]:
         assert self._prompt_task is not None
         try:
             response = await self._prompt_task
@@ -239,14 +258,24 @@ class ACPRuntime:
             response = JSONRPCResponse(id=None, error={"message": str(exc)})
 
         if response.is_error:
-            await on_message({"type": "error", "message": str(response.error)}, True)
+            await on_message(
+                {"type": "error", "message": str(response.error)},
+                True,
+            )
 
         result_payload = response.result or {}
         await self._accumulate_and_emit_assistant_text(
             self._extract_final_assistant_text(result_payload),
             on_message,
         )
-        await on_message({"type": "status", "status": "run_finished", "result": result_payload}, True)
+        await on_message(
+            {
+                "type": "status",
+                "status": "run_finished",
+                "result": result_payload,
+            },
+            True,
+        )
         return result_payload
 
     async def _handle_request(
@@ -256,22 +285,25 @@ class ACPRuntime:
         permission_handler: PermissionHandler,
         on_message: MessageHandler,
     ) -> bool:
-        if request.method != "session/request_permission":
-            await self.transport.send_error(
+        if request.method == "session/request_permission":
+            params = request.params or {}
+            await on_message({"type": "permission_request", **params}, True)
+            resolution = await permission_handler(params)
+            if resolution.suspended is not None:
+                resolution.suspended.request_id = request.id
+                self._suspended_permission = resolution.suspended
+                return True
+            await self.transport.send_result(
                 request.id,
-                code=-32601,
-                message=f"Unsupported ACP client request: {request.method}",
+                resolution.result or {},
             )
             return False
 
-        params = request.params or {}
-        await on_message({"type": "permission_request", **params}, True)
-        resolution = await permission_handler(params)
-        if resolution.suspended is not None:
-            resolution.suspended.request_id = request.id
-            self._suspended_permission = resolution.suspended
-            return True
-        await self.transport.send_result(request.id, resolution.result or {})
+        await self.transport.send_error(
+            request.id,
+            code=-32601,
+            message=f"Unsupported ACP client request: {request.method}",
+        )
         return False
 
     async def _handle_notification(
@@ -290,41 +322,45 @@ class ACPRuntime:
             return
 
         update_type = str(update.get("sessionUpdate") or "").lower()
+        handled = False
         if update_type == "agent_message_chunk":
             self._thinking_active = False
-            await self._accumulate_assistant_content(update.get("content"), on_message=None)
-            return
+            await self._accumulate_assistant_content(
+                update.get("content"),
+                on_message=None,
+            )
+            handled = True
+        else:
+            await self._emit_assistant_text_delta(on_message)
+            handled = await self._handle_non_message_update(
+                update_type=update_type,
+                update=update,
+                on_message=on_message,
+            )
 
-        await self._emit_assistant_text_delta(on_message)
+        if not handled:
+            logger.warning(
+                "Ignored unsupported ACP update from %s: %s",
+                self.agent_name,
+                json.dumps(update, ensure_ascii=False, sort_keys=True),
+            )
 
+    async def _handle_non_message_update(
+        self,
+        *,
+        update_type: str,
+        update: dict[str, Any],
+        on_message: MessageHandler,
+    ) -> bool:
         if update_type == "agent_thought_chunk":
-            if not self._thinking_active:
-                self._thinking_active = True
-                if self.EMIT_THINKING_STATUS:
-                    await on_message(
-                        {
-                            "type": "status",
-                            "status": "agent_thinking",
-                            "summary": f"{self.agent_name} is working...",
-                        },
-                        True,
-                    )
-            return
-
+            return await self._handle_thought_update(on_message)
         self._thinking_active = False
-
         if update_type == "tool_call":
             event = self._tool_parser.handle_tool_call_created(update)
-            if event is not None:
-                await on_message(event, True)
-            return
-
+            return await self._emit_optional_event(event, on_message)
         if update_type == "tool_call_update":
             event = self._tool_parser.handle_tool_call_updated(update)
-            if event is not None:
-                await on_message(event, True)
-            return
-
+            return await self._emit_optional_event(event, on_message)
         if update_type == "error":
             await on_message(
                 {
@@ -334,13 +370,33 @@ class ACPRuntime:
                 },
                 True,
             )
-            return
+            return True
+        return False
 
-        logger.warning(
-            "Ignored unsupported ACP update from %s: %s",
-            self.agent_name,
-            json.dumps(update, ensure_ascii=False, sort_keys=True),
-        )
+    async def _handle_thought_update(self, on_message: MessageHandler) -> bool:
+        if self._thinking_active:
+            return True
+        self._thinking_active = True
+        if self.EMIT_THINKING_STATUS:
+            await on_message(
+                {
+                    "type": "status",
+                    "status": "agent_thinking",
+                    "summary": f"{self.agent_name} is working...",
+                },
+                True,
+            )
+        return True
+
+    async def _emit_optional_event(
+        self,
+        event: dict[str, Any] | None,
+        on_message: MessageHandler,
+    ) -> bool:
+        if event is None:
+            return False
+        await on_message(event, True)
+        return True
 
     def _reset_prompt_state(self) -> None:
         self._assistant_text = ""
@@ -373,7 +429,10 @@ class ACPRuntime:
             return
         self._assistant_text = self._merge_text(self._assistant_text, text)
 
-    async def _emit_assistant_text_delta(self, on_message: MessageHandler) -> None:
+    async def _emit_assistant_text_delta(
+        self,
+        on_message: MessageHandler,
+    ) -> None:
         if not self._assistant_text:
             return
         if self._assistant_text == self._emitted_assistant_text:
@@ -382,12 +441,18 @@ class ACPRuntime:
         if not delta:
             return
         self._emitted_assistant_text = self._assistant_text
-        await on_message({"type": "text", "text": delta, "is_chunk": False}, False)
+        await on_message(
+            {"type": "text", "text": delta, "is_chunk": False},
+            False,
+        )
 
     def _extract_final_assistant_text(self, payload: Any) -> str:
         if not isinstance(payload, dict):
             return ""
-        return self._first_non_empty_text(payload.get("content"), payload.get("message"))
+        return self._first_non_empty_text(
+            payload.get("content"),
+            payload.get("message"),
+        )
 
     def _first_non_empty_text(self, *contents: Any) -> str:
         for content in contents:

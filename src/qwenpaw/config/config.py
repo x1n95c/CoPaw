@@ -25,7 +25,7 @@ from ..constant import (
     WORKING_DIR,
 )
 from ..providers.models import ModelSlotConfig
-from ..agents.acp.core import ACPAgentConfig, ACPConfig
+from ..agents.acp.core import ACPConfig
 
 
 def generate_short_agent_id() -> str:
