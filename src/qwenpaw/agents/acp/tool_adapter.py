@@ -184,8 +184,9 @@ def format_permission_suspended_response(
 
     intro = (
         "🔐 **External Agent Permission Request**\n\n"
-        "User confirmation is required before the external "
-        "agent can continue.\n\n"
+        "Do not make permission decisions on the user's behalf. "
+        "Clearly present the permission details and available options, "
+        "then ask the user for confirmation.\n\n"
     )
     reply_hint = (
         "\n\nReply with one exact option id using "
