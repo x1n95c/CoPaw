@@ -26,6 +26,7 @@ import {
   SparkModifyLine,
   SparkBrowseLine,
   SparkMcpMcpLine,
+  SparkScanLine,
   SparkToolLine,
   SparkDataLine,
   SparkMicLine,
@@ -196,7 +197,7 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
     },
     {
       key: "acp",
-      icon: <SparkOtherLine size={18} />,
+      icon: <SparkScanLine size={18} />,
       path: "/acp",
       label: t("nav.acp"),
     },
@@ -318,7 +319,7 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
         {
           key: "acp",
           label: collapsed ? null : t("nav.acp"),
-          icon: <SparkOtherLine size={16} />,
+          icon: <SparkScanLine size={16} />,
         },
         {
           key: "agent-config",

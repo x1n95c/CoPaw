@@ -3,8 +3,8 @@ import { Card } from "@agentscope-ai/design";
 import {
   ApiOutlined,
   CodeOutlined,
-  RobotOutlined,
   ThunderboltOutlined,
+  ToolOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import type { ACPAgentConfig } from "../../../../api/types";
@@ -15,15 +15,12 @@ interface ACPCardIconSpec {
   imageUrl?: string;
 }
 
-const OPENCODE_ICON_URL =
-  "https://gw.alicdn.com/imgextra/i1/O1CN01d3RfoB28G5dbN4i97_!!6000000007904-2-tps-30-30.png";
-
-const ACP_ICON_MAP: Record<string, ACPCardIconSpec> = {
+const BUILTIN_ACP_ICON_MAP: Record<string, ACPCardIconSpec> = {
   opencode: {
-    imageUrl: OPENCODE_ICON_URL,
+    icon: <CodeOutlined />,
   },
   qwen_code: {
-    icon: <CodeOutlined />,
+    icon: <ToolOutlined />,
   },
   claude_code: {
     icon: <ThunderboltOutlined />,
@@ -34,7 +31,7 @@ const ACP_ICON_MAP: Record<string, ACPCardIconSpec> = {
 };
 
 const DEFAULT_ACP_ICON: ACPCardIconSpec = {
-  icon: <RobotOutlined />,
+  icon: <ApiOutlined />,
 };
 
 interface ACPCardProps {
@@ -53,7 +50,7 @@ export const ACPCard = React.memo(function ACPCard({
   const { t } = useTranslation();
   const [isHover, setIsHover] = useState(false);
   const argsSummary = config.args?.join(" ") || t("acp.notSet");
-  const iconSpec = ACP_ICON_MAP[agentKey] ?? DEFAULT_ACP_ICON;
+  const iconSpec = BUILTIN_ACP_ICON_MAP[agentKey] ?? DEFAULT_ACP_ICON;
   const getCardClassNames = () => {
     if (isHover) return `${styles.channelCard} ${styles.hover}`;
     if (config.enabled) return `${styles.channelCard} ${styles.enabled}`;
@@ -72,7 +69,7 @@ export const ACPCard = React.memo(function ACPCard({
       <div className={styles.cardTopSection}>
         <div className={styles.channelIcon}>
           {iconSpec.imageUrl ? (
-            <img src={iconSpec.imageUrl} alt={agentKey} width={32} height={32} />
+            <img src={iconSpec.imageUrl} alt={agentKey} width={40} height={40} />
           ) : (
             iconSpec.icon
           )}
