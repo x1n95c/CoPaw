@@ -12,10 +12,9 @@ from typing import Any, Awaitable, Callable
 from acp import PROTOCOL_VERSION, spawn_agent_process, text_block
 from acp.schema import ClientCapabilities, Implementation
 
+from ...config.config import ACPAgentConfig, ACPConfig
 from .client import ACPHostedClient
 from .core import (
-    ACPAgentConfig,
-    ACPConfig,
     ACPConfigurationError,
     ACPSessionError,
 )

@@ -19,6 +19,7 @@ import { workspaceApi } from "./modules/workspace";
 import { localModelApi } from "./modules/localModel";
 import { mcpApi } from "./modules/mcp";
 import { tokenUsageApi } from "./modules/tokenUsage";
+import { agentStatsApi } from "./modules/agentStats";
 import { toolsApi } from "./modules/tools";
 import { securityApi } from "./modules/security";
 import { userTimezoneApi } from "./modules/userTimezone";
@@ -69,6 +70,8 @@ export const api = {
 
   // Token Usage
   ...tokenUsageApi,
+  // Agent Statistics
+  ...agentStatsApi,
   // Tools
   ...toolsApi,
 

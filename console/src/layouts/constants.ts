@@ -35,6 +35,7 @@ export const KEY_TO_PATH: Record<string, string> = {
   "agent-config": "/agent-config",
   security: "/security",
   "token-usage": "/token-usage",
+  "agent-stats": "/agent-stats",
   "voice-transcription": "/voice-transcription",
   debug: "/debug",
 };

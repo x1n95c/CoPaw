@@ -2,8 +2,6 @@
 """ACP client and server exports."""
 
 from .core import (
-    ACPAgentConfig,
-    ACPConfig,
     ACPConfigurationError,
     ACPProtocolError,
     ACPSessionError,
@@ -20,8 +18,6 @@ from .service import (
 )
 
 __all__ = [
-    "ACPAgentConfig",
-    "ACPConfig",
     "ACPErrors",
     "ACPConfigurationError",
     "ACPProtocolError",

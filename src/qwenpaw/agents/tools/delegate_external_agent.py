@@ -41,9 +41,9 @@ def _resolve_execution_cwd(cwd: str, workspace_dir: Path) -> Path:
 
 def _get_acp_service() -> Any:
     from ...app.agent_context import get_current_agent_id
+    from ...config.config import ACPConfig
     from ...config.config import load_agent_config
     from ..acp import get_acp_service, init_acp_service
-    from ..acp.core import ACPConfig
 
     agent_id = get_current_agent_id()
     agent_config = load_agent_config(agent_id)
@@ -56,8 +56,7 @@ def _get_acp_service() -> Any:
 
 def _get_available_acp_runners() -> list[str]:
     from ...app.agent_context import get_current_agent_id
-    from ...config.config import load_agent_config
-    from ..acp.core import ACPConfig
+    from ...config.config import ACPConfig, load_agent_config
 
     agent_id = get_current_agent_id()
     agent_config = load_agent_config(agent_id)
