@@ -38,6 +38,7 @@ import {
   SparkOtherLine,
   SparkBarChartLine,
   SparkDebugLine,
+  SparkSaveLine,
 } from "@agentscope-ai/icons";
 import { clearAuthToken } from "../api/config";
 import { authApi } from "../api/modules/auth";
@@ -246,6 +247,12 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
       label: t("nav.agentStats"),
     },
     {
+      key: "backups",
+      icon: <SparkSaveLine size={18} />,
+      path: "/backups",
+      label: t("nav.backups"),
+    },
+    {
       key: "voice-transcription",
       icon: <SparkMicLine size={18} />,
       path: "/voice-transcription",
@@ -379,6 +386,11 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
           key: "agent-stats",
           label: collapsed ? null : t("nav.agentStats"),
           icon: <SparkBarChartLine size={16} />,
+        },
+        {
+          key: "backups",
+          label: collapsed ? null : t("nav.backups"),
+          icon: <SparkSaveLine size={16} />,
         },
         {
           key: "voice-transcription",

@@ -305,12 +305,16 @@ class TelegramChannel(BaseChannel):
         self._http_proxy = http_proxy or ""
         self._http_proxy_auth = http_proxy_auth or ""
         self.bot_prefix = bot_prefix
-        self._media_dir = (
-            Path(media_dir).expanduser() if media_dir else _DEFAULT_MEDIA_DIR
-        )
         self._workspace_dir = (
             Path(workspace_dir).expanduser() if workspace_dir else None
         )
+        # Use workspace-specific media dir if workspace_dir is provided
+        if not media_dir and self._workspace_dir:
+            self._media_dir = self._workspace_dir / "media"
+        elif media_dir:
+            self._media_dir = Path(media_dir).expanduser()
+        else:
+            self._media_dir = _DEFAULT_MEDIA_DIR
         self._show_typing = show_typing
         self._typing_tasks: dict[str, asyncio.Task] = {}
         self._is_processing: dict[str, bool] = {}
