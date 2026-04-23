@@ -1581,6 +1581,8 @@
     "stdioBufferLimitHelp": "ACP サブプロセスの stdio 1 行読み取りバッファの最大バイト数です。",
     "stdioBufferLimitRequired": "stdio バッファ上限を入力してください",
     "stdioBufferLimitMin": "stdio バッファ上限は 1 バイト以上である必要があります",
+    "docs": "設定ドキュメント",
+    "docsHelp": "ACP 統合ドキュメントを開き、「How to configure external runners」セクションへ移動します",
     "notSet": "未設定",
     "configSaved": "ACP 設定を保存しました",
     "configFailed": "ACP 設定の保存に失敗しました"

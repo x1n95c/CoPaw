@@ -1596,6 +1596,8 @@
     "stdioBufferLimitHelp": "Максимальный размер буфера чтения одной строки stdio для ACP-подпроцесса в байтах.",
     "stdioBufferLimitRequired": "Пожалуйста, укажите лимит буфера stdio",
     "stdioBufferLimitMin": "Лимит буфера stdio должен быть не меньше 1 байта",
+    "docs": "Документация",
+    "docsHelp": "Открыть документацию по ACP и перейти к разделу \"How to configure external runners\"",
     "notSet": "Не задано",
     "configSaved": "Конфигурация ACP сохранена",
     "configFailed": "Не удалось сохранить конфигурацию ACP"

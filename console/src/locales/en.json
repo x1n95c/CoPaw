@@ -115,6 +115,8 @@
     "stdioBufferLimitHelp": "Maximum stdio line buffer size in bytes for the ACP subprocess.",
     "stdioBufferLimitRequired": "Please enter a stdio buffer limit",
     "stdioBufferLimitMin": "Stdio buffer limit must be at least 1 byte",
+    "docs": "Setup Docs",
+    "docsHelp": "Open the ACP integration docs and jump to the \"How to configure external runners\" section",
     "notSet": "Not set",
     "configSaved": "ACP configuration saved",
     "configFailed": "Failed to save ACP configuration"

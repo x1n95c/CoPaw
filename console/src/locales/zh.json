@@ -210,6 +210,8 @@
     "stdioBufferLimitHelp": "ACP 子进程 stdio 单行读取缓冲的最大字节数。",
     "stdioBufferLimitRequired": "请输入 stdio 缓冲上限",
     "stdioBufferLimitMin": "stdio 缓冲上限至少为 1 字节",
+    "docs": "配置文档",
+    "docsHelp": "打开 ACP 集成文档，并跳转到“如何配置外部 runner”章节",
     "notSet": "未设置",
     "configSaved": "ACP 配置已保存",
     "configFailed": "ACP 配置保存失败"
