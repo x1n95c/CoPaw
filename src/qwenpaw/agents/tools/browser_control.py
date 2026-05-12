@@ -1022,9 +1022,9 @@ async def _action_start(
                     # launch_persistent_context returns context directly; no separate browser object
                     _attach_context_listeners(state, context)
                     state["playwright"] = pw
-                    state["browser"] = (
-                        None  # not needed for persistent context
-                    )
+                    state[
+                        "browser"
+                    ] = None  # not needed for persistent context
                     state["context"] = context
                 else:
                     launch_kwargs = {"headless": state["headless"]}
@@ -3614,9 +3614,9 @@ async def _action_batch(  # pylint: disable=too-many-nested-blocks
                 )
 
             else:
-                step_result["error"] = (
-                    f"Unknown batch sub-action: {sub_action}"
-                )
+                step_result[
+                    "error"
+                ] = f"Unknown batch sub-action: {sub_action}"
 
             # Parse helper response into step_result
             if resp is not None and resp.content:
@@ -3627,9 +3627,9 @@ async def _action_batch(  # pylint: disable=too-many-nested-blocks
                     if isinstance(resp_data, dict):
                         step_result.update(resp_data)
                 except (json.JSONDecodeError, AttributeError, IndexError):
-                    step_result["error"] = (
-                        "Failed to parse sub-action response"
-                    )
+                    step_result[
+                        "error"
+                    ] = "Failed to parse sub-action response"
 
         except Exception as e:
             step_result["error"] = str(e)
