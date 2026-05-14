@@ -566,6 +566,7 @@ async def _start_managed_cdp_browser(
         cdp_port=chosen_cdp_port,
         browser_args=browser_args,
     )
+    pw = None
     try:
         await _wait_for_cdp_ready(chosen_cdp_port)
         async_playwright = _ensure_playwright_async()
@@ -603,6 +604,11 @@ async def _start_managed_cdp_browser(
                 _register_page(state, page, page_id)
                 state["current_page_id"] = page_id
     except Exception:
+        if pw is not None:
+            try:
+                await pw.stop()
+            except Exception:
+                pass
         try:
             if proc.poll() is None:
                 proc.kill()
@@ -3904,6 +3910,7 @@ async def _action_connect_cdp(state: dict, cdp_url: str) -> ToolResponse:
             ),
         )
 
+    pw = None
     try:
         async_playwright = _ensure_playwright_async()
         pw = await async_playwright().start()
@@ -3952,6 +3959,11 @@ async def _action_connect_cdp(state: dict, cdp_url: str) -> ToolResponse:
             ),
         )
     except asyncio.TimeoutError:
+        if pw is not None:
+            try:
+                await pw.stop()
+            except Exception:
+                pass
         return _tool_response(
             json.dumps(
                 {
@@ -3966,6 +3978,11 @@ async def _action_connect_cdp(state: dict, cdp_url: str) -> ToolResponse:
             ),
         )
     except Exception as e:
+        if pw is not None:
+            try:
+                await pw.stop()
+            except Exception:
+                pass
         return _tool_response(
             json.dumps(
                 {"ok": False, "error": f"CDP connect failed: {e!s}"},
